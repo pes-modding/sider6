@@ -33,9 +33,10 @@ sider_read_file_hk proc
         mov     rax,[rsp+28h]
         sub     rsp,38h
         mov     [rsp+20h],rax
-        mov     [rsp+28h],r12
+        mov     rax,[r9+20h]
+        mov     [rsp+28h],rax
         call    sider_read_file
-        mov     r12,[rsp+28h]
+        ;mov     r12,[rsp+28h]
         add     rsp,38h
         ret
 
@@ -48,7 +49,7 @@ sider_get_size_hk proc
         mov     rcx,rsi
         mov     rdx,rbx
         call    sider_get_size
-        mov     rcx,qword ptr [rdi+1d8h]
+        mov     rcx,qword ptr [rdi+1d0h]
         mov     eax,1
         mov     rdx,[rsp+20h]
         add     rsp,28h
@@ -61,19 +62,19 @@ sider_extend_cpk_hk proc
         mov     rax,1000000000000000h
         mov     qword ptr [rdi+8],rax
         mov     qword ptr [r13],rdi
+        xor     rax,rax
         ret
 
 sider_extend_cpk_hk endp
 
 sider_mem_copy_hk proc
 
-        push    r12
+        push    rsp
         sub     rsp,20h
-        add     r8,r10
+        mov     rcx,r11
         call    sider_mem_copy
         mov     qword ptr [rdi+10h],rbx
-        add     rsp,20h
-        pop     r12
+        add     rsp,28h
         ret
 
 sider_mem_copy_hk endp
@@ -83,7 +84,7 @@ sider_lookup_file_hk proc
         push    rax
         sub     rsp,20h
         call    sider_lookup_file
-        lea     rcx,qword ptr [rdi+110h]
+        lea     rcx,qword ptr [rdi+108h]
         mov     r8,rsi
         lea     rdx,qword ptr [rsp+50h]
         add     rsp,20h

@@ -95,7 +95,7 @@ struct FILE_LOAD_INFO {
 };
 
 struct READ_STRUCT {
-    BYTE b0[0xa0];
+    BYTE b0[0x170];
     LONGLONG filesize;
     FILE_HANDLE_INFO *fileinfo;
     union {
@@ -484,7 +484,7 @@ extern "C" void sider_get_size_hk();
 
 extern "C" void sider_extend_cpk_hk();
 
-extern "C" void sider_mem_copy(BYTE *dst, LONGLONG dst_len, BYTE *src, LONGLONG src_len, struct READ_STRUCT *rs);
+extern "C" void sider_mem_copy(BYTE *dst, LONGLONG dst_len, BYTE *src, LONGLONG src_len, BYTE **rsp);
 
 extern "C" void sider_mem_copy_hk();
 
@@ -3964,7 +3964,8 @@ BOOL sider_read_file(
             rs->filesize, rs->offset.full, rs->filename);
 
         BYTE* p = (BYTE*)rs;
-        fli = *((FILE_LOAD_INFO **)(p - 0x18));
+        fli = (FILE_LOAD_INFO *)p;
+        //DBG(3) logu_("read_file:: fli = %p\n", fli);
 
         wstring *fn;
         fn = (_config->_lua_enabled) ? have_content(rs->filename) : NULL;
@@ -3993,7 +3994,7 @@ BOOL sider_read_file(
                 rs->offset.parts.high = offsetHigh;
                 LONGLONG offset = rs->offset.full;
 
-                if (fli) {
+                if (fli && !IsBadReadPtr(fli, sizeof(struct FILE_LOAD_INFO))) {
                     // adjust offset for multi-part reads
                     SetFilePointer(hFile, fli->bytes_read_so_far, NULL, FILE_CURRENT);
                     offset = offset + fli->bytes_read_so_far;
@@ -4064,7 +4065,7 @@ BOOL sider_read_file(
     return result;
 }
 
-void sider_mem_copy(BYTE *dst, LONGLONG dst_len, BYTE *src, LONGLONG src_len, struct READ_STRUCT *rs)
+void sider_mem_copy(BYTE *dst, LONGLONG dst_len, BYTE *src, LONGLONG src_len, BYTE **rsp)
 {
     HANDLE handle = INVALID_HANDLE_VALUE;
     wstring *filename = NULL;
@@ -4077,13 +4078,20 @@ void sider_mem_copy(BYTE *dst, LONGLONG dst_len, BYTE *src, LONGLONG src_len, st
 
     LONGLONG dst_len_used = dst_len;
 
+    // dump some stack
+    //for (int i=0; i<(0x100/8); i++) {
+    //    DBG(1) logu_("mem_copy:: %p (%x): %p\n", rsp+i, i, *(rsp+i));
+    //}
+
+    struct READ_STRUCT *rs = (struct READ_STRUCT*)*(rsp+0xf);
     if (rs) {
         if (_config->_lua_enabled && _rewrite_count > 0) do_rewrite(rs->filename);
         DBG(1) logu_("mem_copy:: rs->filesize: %llx, rs->offset: %llx, rs->filename: %s\n",
             rs->filesize, rs->offset.full, rs->filename);
 
         BYTE* p = (BYTE*)rs;
-        FILE_LOAD_INFO *fli = *((FILE_LOAD_INFO **)(p - 0x18));
+        FILE_LOAD_INFO *fli = (FILE_LOAD_INFO *)p;
+        //DBG(3) logu_("mem_copy:: fli = %p\n", fli);
 
         wstring *fn(NULL);
         fn = (_config->_lua_enabled) ? have_content(rs->filename) : NULL;
@@ -4108,7 +4116,7 @@ void sider_mem_copy(BYTE *dst, LONGLONG dst_len, BYTE *src, LONGLONG src_len, st
                 rs->offset.parts.high = offsetHigh;
                 LONGLONG offset = rs->offset.full;
 
-                if (fli) {
+                if (fli && !IsBadReadPtr(fli, sizeof(struct FILE_LOAD_INFO))) {
                     // adjust offset for multi-part reads
                     SetFilePointer(handle, fli->bytes_read_so_far, NULL, FILE_CURRENT);
                     offset = offset + fli->bytes_read_so_far;
