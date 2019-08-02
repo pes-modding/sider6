@@ -6239,6 +6239,9 @@ bool hook_if_all_found() {
     bool result(false);
 
     if (all_found(_config)) {
+        logu_("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+        logu_("Success:: all hook points found. Sider is enabled now\n");
+        logu_("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         result = true;
 
         // hooks
