@@ -996,6 +996,7 @@ public:
     BYTE *_hp_at_check_kit_choice;
     BYTE *_hp_at_get_uniparam;
     BYTE *_hp_at_data_ready;
+    BYTE *_hp_at_call_to_move;
     BYTE *_hp_at_kit_status;
     BYTE *_hp_at_set_team_for_kits;
     BYTE *_hp_at_clear_team_for_kits;
@@ -1056,6 +1057,7 @@ public:
                  _hp_at_check_kit_choice(NULL),
                  _hp_at_get_uniparam(NULL),
                  _hp_at_data_ready(NULL),
+                 _hp_at_call_to_move(NULL),
                  _hp_at_kit_status(NULL),
                  _hp_at_set_team_for_kits(NULL),
                  _hp_at_clear_team_for_kits(NULL),
@@ -4621,6 +4623,18 @@ void hook_indirect_call(BYTE *loc, BYTE *p) {
     }
 }
 
+void move_code(BYTE *loc, int offset, size_t code_len) {
+    if (!loc) {
+        return;
+    }
+    DWORD protection = 0;
+    DWORD newProtection = PAGE_EXECUTE_READWRITE;
+    if (VirtualProtect(loc + offset, code_len, newProtection, &protection)) {
+        memmove_s(loc + offset, code_len, loc, code_len);
+        log_(L"move_code: moved %d bytes from %p to %p\n", code_len, loc, loc + offset);
+    }
+}
+
 void hook_jmp(BYTE *loc, BYTE *p, size_t nops) {
     if (!loc) {
         return;
@@ -5941,7 +5955,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 28
+#define NUM_PATTERNS 29
     BYTE *frag[NUM_PATTERNS];
     frag[0] = lcpk_pattern_at_read_file;
     frag[1] = lcpk_pattern_at_get_size;
@@ -5971,6 +5985,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[25] = pattern_set_team_for_kits;
     frag[26] = pattern_clear_team_for_kits;
     frag[27] = pattern_uniparam_loaded;
+    frag[28] = pattern_call_to_move;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[0] = 23;
@@ -6007,6 +6022,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[25] = _config->_lua_enabled ? sizeof(pattern_set_team_for_kits)-1 : 0;
     frag_len[26] = _config->_lua_enabled ? sizeof(pattern_clear_team_for_kits)-1 : 0;
     frag_len[27] = _config->_lua_enabled ? sizeof(pattern_uniparam_loaded)-1 : 0;
+    frag_len[28] = _config->_lua_enabled ? sizeof(pattern_call_to_move)-1 : 0;
 
     int offs[NUM_PATTERNS];
     offs[0] = lcpk_offs_at_read_file;
@@ -6037,6 +6053,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[25] = offs_set_team_for_kits;
     offs[26] = offs_clear_team_for_kits;
     offs[27] = offs_uniparam_loaded;
+    offs[28] = offs_call_to_move;
 
     BYTE **addrs[NUM_PATTERNS];
     addrs[0] = &_config->_hp_at_read_file;
@@ -6067,6 +6084,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[25] = &_config->_hp_at_set_team_for_kits;
     addrs[26] = &_config->_hp_at_clear_team_for_kits;
     addrs[27] = &_config->_hp_at_uniparam_loaded;
+    addrs[28] = &_config->_hp_at_call_to_move;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -6162,23 +6180,26 @@ bool all_found(config_t *cfg) {
         );
     }
     if (cfg->_lua_enabled) {
+        //all = all && true;
         all = all && (
-            cfg->_hp_at_set_team_id > 0 &&
-            cfg->_hp_at_set_settings > 0 &&
-            cfg->_hp_at_trophy_check > 0 &&
-            cfg->_hp_at_trophy_table > 0 &&
-            cfg->_hp_at_ball_name > 0 &&
-            cfg->_hp_at_stadium_name > 0 &&
-            cfg->_hp_at_def_stadium_name > 0 &&
-            cfg->_hp_at_context_reset > 0 &&
-            cfg->_hp_at_set_stadium_choice > 0 &&
-            cfg->_hp_at_check_kit_choice > 0 &&
-            cfg->_hp_at_get_uniparam > 0 &&
+            //cfg->_hp_at_set_team_id > 0 &&
+            //cfg->_hp_at_set_settings > 0 &&
+            //cfg->_hp_at_trophy_check > 0 &&
+            //cfg->_hp_at_trophy_table > 0 &&
+            //cfg->_hp_at_ball_name > 0 &&
+            //cfg->_hp_at_stadium_name > 0 &&
+            //cfg->_hp_at_def_stadium_name > 0 &&
+            //cfg->_hp_at_context_reset > 0 &&
+            //cfg->_hp_at_set_stadium_choice > 0 &&
+            //cfg->_hp_at_check_kit_choice > 0 &&
+            //cfg->_hp_at_get_uniparam > 0 &&
             cfg->_hp_at_data_ready > 0 &&
-            cfg->_hp_at_kit_status > 0 &&
-            cfg->_hp_at_set_team_for_kits > 0 &&
-            cfg->_hp_at_clear_team_for_kits > 0 &&
-            cfg->_hp_at_uniparam_loaded > 0
+            cfg->_hp_at_call_to_move > 0 &&
+            //cfg->_hp_at_kit_status > 0 &&
+            //cfg->_hp_at_set_team_for_kits > 0 &&
+            //cfg->_hp_at_clear_team_for_kits > 0 &&
+            //cfg->_hp_at_uniparam_loaded > 0 &&
+            true
         );
     }
     if (cfg->_num_minutes > 0) {
@@ -6271,6 +6292,7 @@ bool hook_if_all_found() {
 
         if (_config->_lua_enabled) {
             log_(L"-------------------------------\n");
+            /*
             log_(L"sider_set_team_id: %p\n", sider_set_team_id_hk);
             log_(L"sider_set_settings: %p\n", sider_set_settings_hk);
             log_(L"sider_trophy_check: %p\n", sider_trophy_check_hk);
@@ -6281,8 +6303,11 @@ bool hook_if_all_found() {
             log_(L"sider_def_stadium_name: %p\n", sider_def_stadium_name_hk);
             log_(L"sider_set_stadium_choice: %p\n", sider_set_stadium_choice_hk);
             log_(L"sider_check_kit_choice: %p\n", sider_check_kit_choice_hk);
+            */
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
+            log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
 
+            /*
             if (_config->_hook_set_team_id) {
                 BYTE *check_addr = _config->_hp_at_set_team_id - offs_set_team_id + offs_check_set_team_id;
                 logu_("_hp_at_set_team_id: %p\n", _config->_hp_at_set_team_id);
@@ -6320,8 +6345,16 @@ bool hook_if_all_found() {
             hook_call_with_head_and_tail(_config->_hp_at_set_stadium_choice, (BYTE*)sider_set_stadium_choice_hk,
                 (BYTE*)pattern_set_stadium_choice_head, sizeof(pattern_set_stadium_choice_head)-1,
                 (BYTE*)pattern_set_stadium_choice_tail, sizeof(pattern_set_stadium_choice_tail)-1);
+            */
+
+            // move next function (right after data_ready)
+            move_code(_config->_hp_at_data_ready + 11, 1, 7);
+            DWORD rel_offs = *(DWORD*)(_config->_hp_at_call_to_move + 1) + 1;
+            patch_at_location(_config->_hp_at_call_to_move + 1, (BYTE*)&rel_offs, sizeof(DWORD));
+
             hook_jmp(_config->_hp_at_data_ready, (BYTE*)sider_data_ready_hk, 0);
 
+            /*
             hook_call(_config->_hp_at_check_kit_choice, (BYTE*)sider_check_kit_choice_hk, 0);
 
             _uniparam_base = get_target_location2(_config->_hp_at_get_uniparam);
@@ -6340,6 +6373,7 @@ bool hook_if_all_found() {
                 (BYTE*)pattern_def_stadium_name_head, sizeof(pattern_def_stadium_name_head)-1,
                 (BYTE*)pattern_def_stadium_name_tail, sizeof(pattern_def_stadium_name_tail)-1,
                 old_moved_call, new_moved_call);
+            */
             log_(L"-------------------------------\n");
         }
 

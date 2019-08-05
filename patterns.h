@@ -401,23 +401,37 @@ base_addr = addr  + offs
 */
 
 /*
-000000014000E877 | C7 43 18 07 00 00 00            | mov dword ptr ds:[rbx+18],7            |
-000000014000E87E | 89 43 6C                        | mov dword ptr ds:[rbx+6C],eax          |
-000000014000E881 | 83 7B 18 06                     | cmp dword ptr ds:[rbx+18],6            |
-000000014000E885 | 75 08                           | jne pes2019.14000E88F                  |
+0000000140F6E3A8 | 89 43 6C                           | mov dword ptr ds:[rbx+6C],eax        |
+0000000140F6E3AB | C7 43 18 07 00 00 00               | mov dword ptr ds:[rbx+18],7          |
+0000000140F6E3B2 | 83 7B 18 06                        | cmp dword ptr ds:[rbx+18],6          |
+0000000140F6E3B6 | 75 08                              | jne pes2020.140F6E3C0                |
 ...
-000000014000E8A0 | 48 8B 5C 24 30                  | mov rbx,qword ptr ss:[rsp+30]          |
-000000014000E8A5 | 48 83 C4 20                     | add rsp,20                             |
-000000014000E8A9 | 5D                              | pop rbp                                |
-000000014000E8AA | C3                              | ret                                    |
-000000014000E8AB | CC                              | int3                                   |
+0000000140F6E3D1 | 48 8B 5C 24 30                     | mov rbx,qword ptr ss:[rsp+30]        |
+0000000140F6E3D6 | 48 83 C4 20                        | add rsp,20                           |
+0000000140F6E3DA | 5D                                 | pop rbp                              |
+0000000140F6E3DB | C3                                 | ret                                  |
 */
 static BYTE pattern_data_ready[17] =
-    "\xc7\x43\x18\x07\x00\x00\x00"
     "\x89\x43\x6c"
+    "\xc7\x43\x18\x07\x00\x00\x00"
     "\x83\x7b\x18\x06"
     "\x75\x08";
-static int offs_data_ready = 0xa0-0x77;
+static int offs_data_ready = 0xd1-0xa8;
+
+/*
+0000000141C0DC50 | 85 C0                              | test eax,eax                         |
+0000000141C0DC52 | 75 26                              | jne pes2020.141C0DC7A                |
+0000000141C0DC54 | 8B D3                              | mov edx,ebx                          |
+0000000141C0DC56 | 48 8B CF                           | mov rcx,rdi                          |
+...
+0000000141C0DC68 | E8 6F 07 36 FF                     | call pes2020.140F6E3DC               | call to move
+*/
+static BYTE pattern_call_to_move[10] =
+    "\x85\xc0"
+    "\x75\x26"
+    "\x8b\xd3"
+    "\x48\x8b\xcf";
+static int offs_call_to_move = 0x68-0x50;
 
 /*
 00000001505F09CC | 44 0F B6 4B 4E                     | movzx r9d,byte ptr ds:[rbx+4E]       |
