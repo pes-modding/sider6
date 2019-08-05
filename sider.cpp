@@ -5352,6 +5352,7 @@ static void push_context_table(lua_State *L)
     lua_pushcfunction(L, sider_context_register);
     lua_setfield(L, -2, "register");
 
+    /* commenting out "kits" table for now
     lua_newtable(L);
     lua_pushcfunction(L, sider_context_get_current_team_id);
     lua_setfield(L, -2, "get_current_team");
@@ -5374,6 +5375,7 @@ static void push_context_table(lua_State *L)
     lua_pushcfunction(L, sider_context_refresh_kit);
     lua_setfield(L, -2, "refresh");
     lua_setfield(L, -2, "kits");
+    */
 }
 
 static void push_env_table(lua_State *L, const wchar_t *script_name)
