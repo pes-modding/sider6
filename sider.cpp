@@ -4367,6 +4367,7 @@ void sider_context_reset()
     _mi = NULL;
     _home_team_info = NULL;
     _away_team_info = NULL;
+
     logu_("context reset\n");
 }
 
@@ -5376,6 +5377,10 @@ static void push_context_table(lua_State *L)
     lua_setfield(L, -2, "refresh");
     lua_setfield(L, -2, "kits");
     */
+
+    // tmp
+    lua_pushnumber(L, 65535);
+    lua_setfield(L, -2, "tournament_id");
 }
 
 static void push_env_table(lua_State *L, const wchar_t *script_name)
@@ -6188,7 +6193,7 @@ bool all_found(config_t *cfg) {
             //cfg->_hp_at_set_settings > 0 &&
             //cfg->_hp_at_trophy_check > 0 &&
             //cfg->_hp_at_trophy_table > 0 &&
-            //cfg->_hp_at_ball_name > 0 &&
+            cfg->_hp_at_ball_name > 0 &&
             //cfg->_hp_at_stadium_name > 0 &&
             //cfg->_hp_at_def_stadium_name > 0 &&
             //cfg->_hp_at_context_reset > 0 &&
@@ -6300,7 +6305,9 @@ bool hook_if_all_found() {
             log_(L"sider_trophy_check: %p\n", sider_trophy_check_hk);
             log_(L"sider_trophy_table: %p\n", sider_trophy_table_hk);
             log_(L"sider_context_reset: %p\n", sider_context_reset_hk);
+            */
             log_(L"sider_ball_name: %p\n", sider_ball_name_hk);
+            /*
             log_(L"sider_stadium_name: %p\n", sider_stadium_name_hk);
             log_(L"sider_def_stadium_name: %p\n", sider_def_stadium_name_hk);
             log_(L"sider_set_stadium_choice: %p\n", sider_set_stadium_choice_hk);
@@ -6338,9 +6345,11 @@ bool hook_if_all_found() {
                 hook_call_rcx(_config->_hp_at_trophy_table, (BYTE*)sider_trophy_table_hk, 0);
             if (_config->_hook_context_reset)
                 hook_call(_config->_hp_at_context_reset, (BYTE*)sider_context_reset_hk, 6);
+            */
             hook_call_with_head_and_tail(_config->_hp_at_ball_name, (BYTE*)sider_ball_name_hk,
                 (BYTE*)pattern_ball_name_head, sizeof(pattern_ball_name_head)-1,
                 (BYTE*)pattern_ball_name_tail, sizeof(pattern_ball_name_tail)-1);
+            /*
             hook_call_with_head_and_tail(_config->_hp_at_stadium_name, (BYTE*)sider_stadium_name_hk,
                 (BYTE*)pattern_stadium_name_head, sizeof(pattern_stadium_name_head)-1,
                 (BYTE*)pattern_stadium_name_tail, sizeof(pattern_stadium_name_tail)-1);
