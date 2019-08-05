@@ -823,8 +823,8 @@ public:
 
     ~gamepad_config_t() {}
     gamepad_config_t(const wstring& section_name, const wchar_t* gamepad_ini) :
-            _dinput_enabled(true),
-            _xinput_enabled(true),
+            _dinput_enabled(false),
+            _xinput_enabled(false),
             _overlay_toggle_1(GAMEPAD::RT),
             _overlay_toggle_2(GAMEPAD::LT),
             _overlay_next_module(GAMEPAD::LT),
