@@ -4233,8 +4233,8 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
         _away_team_info = team_info;
     }
 
-    BYTE *p = (BYTE*)dest - 0x118;
-    p = (is_home) ? p : p - 0x5ec;
+    BYTE *p = (BYTE*)dest - 0x138;
+    p = (is_home) ? p : p - 0x654;
     MATCH_INFO_STRUCT *mi = (MATCH_INFO_STRUCT*)p;
     //logu_("mi: %p\n", mi);
     //logu_("mi->dw0: 0x%x\n", mi->dw0);
@@ -4254,7 +4254,7 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
             set_context_field_int("stadium_choice", mi->stadium_choice);
             set_match_info(mi);
 
-            DWORD home = decode_team_id(*(DWORD*)((BYTE*)dest - 0x5ec));
+            DWORD home = decode_team_id(*(DWORD*)((BYTE*)dest - 0x654));
             DWORD away = decode_team_id(*team_id_encoded);
 
             set_context_field_int("home_team", home);
@@ -5377,10 +5377,6 @@ static void push_context_table(lua_State *L)
     lua_setfield(L, -2, "refresh");
     lua_setfield(L, -2, "kits");
     */
-
-    // tmp
-    lua_pushnumber(L, 65535);
-    lua_setfield(L, -2, "tournament_id");
 }
 
 static void push_env_table(lua_State *L, const wchar_t *script_name)
@@ -6189,14 +6185,14 @@ bool all_found(config_t *cfg) {
     if (cfg->_lua_enabled) {
         //all = all && true;
         all = all && (
-            //cfg->_hp_at_set_team_id > 0 &&
+            cfg->_hp_at_set_team_id > 0 &&
             //cfg->_hp_at_set_settings > 0 &&
             //cfg->_hp_at_trophy_check > 0 &&
             //cfg->_hp_at_trophy_table > 0 &&
             cfg->_hp_at_ball_name > 0 &&
             //cfg->_hp_at_stadium_name > 0 &&
             //cfg->_hp_at_def_stadium_name > 0 &&
-            //cfg->_hp_at_context_reset > 0 &&
+            cfg->_hp_at_context_reset > 0 &&
             //cfg->_hp_at_set_stadium_choice > 0 &&
             //cfg->_hp_at_check_kit_choice > 0 &&
             //cfg->_hp_at_get_uniparam > 0 &&
@@ -6316,7 +6312,6 @@ bool hook_if_all_found() {
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
             log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
 
-            /*
             if (_config->_hook_set_team_id) {
                 BYTE *check_addr = _config->_hp_at_set_team_id - offs_set_team_id + offs_check_set_team_id;
                 logu_("_hp_at_set_team_id: %p\n", _config->_hp_at_set_team_id);
@@ -6335,6 +6330,7 @@ bool hook_if_all_found() {
                         (BYTE*)pattern_set_team_id_tail_2, sizeof(pattern_set_team_id_tail_2)-1);
                 }
             }
+            /*
             if (_config->_hook_set_settings)
                 hook_call_with_head_and_tail(_config->_hp_at_set_settings, (BYTE*)sider_set_settings_hk,
                     (BYTE*)pattern_set_settings_head, sizeof(pattern_set_settings_head)-1,
@@ -6343,9 +6339,9 @@ bool hook_if_all_found() {
                 hook_call_rcx(_config->_hp_at_trophy_check, (BYTE*)sider_trophy_check_hk, 0);
             if (_config->_hook_trophy_table)
                 hook_call_rcx(_config->_hp_at_trophy_table, (BYTE*)sider_trophy_table_hk, 0);
+            */
             if (_config->_hook_context_reset)
                 hook_call(_config->_hp_at_context_reset, (BYTE*)sider_context_reset_hk, 6);
-            */
             hook_call_with_head_and_tail(_config->_hp_at_ball_name, (BYTE*)sider_ball_name_hk,
                 (BYTE*)pattern_ball_name_head, sizeof(pattern_ball_name_head)-1,
                 (BYTE*)pattern_ball_name_tail, sizeof(pattern_ball_name_tail)-1);

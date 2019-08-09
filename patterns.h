@@ -63,19 +63,21 @@ static BYTE lcpk_pattern_at_lookup_file[16] =
 static int lcpk_offs_at_lookup_file = 0;
 
 /*
-000000014ACDA200 | 49 63 00                             | movsxd rax,dword ptr ds:[r8]               |
-000000014ACDA203 | 83 F8 02                             | cmp eax,2                                  |
-000000014ACDA206 | 7D 16                                | jge pes2019.14ACDA21E                      |
-000000014ACDA208 | 4C 69 C0 EC 05 00 00                 | imul r8,rax,5EC                            |
-000000014ACDA20F | 48 81 C1 18 01 00 00                 | add rcx,118                                |
-000000014ACDA216 | 4C 01 C1                             | add rcx,r8                                 |
+0000000150E98CB0 | 49 63 00                           | movsxd rax,dword ptr ds:[r8]         | at set team id
+0000000150E98CB3 | 83 F8 02                           | cmp eax,2                            |
+0000000150E98CB6 | 7D 16                              | jge pes2020.150E98CCE                |
+0000000150E98CB8 | 4C 69 C0 54 06 00 00               | imul r8,rax,654                      |
+0000000150E98CBF | 48 81 C1 38 01 00 00               | add rcx,138                          |
+0000000150E98CC6 | 4C 01 C1                           | add rcx,r8                           |
+0000000150E98CC9 | E9 12 0A DD EF                     | jmp pes2020.140C696E0                |
+0000000150E98CCE | C3                                 | ret                                  |
 */
 static BYTE pattern_set_team_id[18] =
     //"\x49\x63\x00"
     //"\x83\xf8\x02"
     //"\x7d\x26"
-    "\x4c\x69\xc0\xec\x05\x00\x00"
-    "\x48\x81\xc1\x18\x01\x00\x00"
+    "\x4c\x69\xc0\x54\x06\x00\x00"
+    "\x48\x81\xc1\x38\x01\x00\x00"
     "\x4c\x01\xc1";
 static int offs_set_team_id = -8;
 
@@ -152,12 +154,12 @@ static BYTE pattern_trophy_check_tail[10] =
     "\x0f\x84\x8d\x00\x00\x00";
 
 /*
-0000000140A0DF3C | 48 89 8B 84 00 00 00                 | mov qword ptr ds:[rbx+84],rcx           |
-0000000140A0DF43 | 48 C7 83 74 1F 02 00 FF FF FF FF     | mov qword ptr ds:[rbx+21F74],FFFFFFFFFF |
+0000000140A8FA94 | 48 89 8B 84 00 00 00               | mov qword ptr ds:[rbx+84],rcx        |
+0000000140A8FA9B | 48 C7 83 C4 01 02 00 FF FF FF FF   | mov qword ptr ds:[rbx+201C4],FFFFFFF |
 */
 static BYTE pattern_context_reset[19] =
     "\x48\x89\x8b\x84\x00\x00\x00"
-    "\x48\xc7\x83\x74\x1f\x02\x00\xff\xff\xff\xff";
+    "\x48\xc7\x83\xc4\x01\x02\x00\xff\xff\xff\xff";
 static int offs_context_reset = 0;
 
 ////// PES 2019 demo ///////////////////

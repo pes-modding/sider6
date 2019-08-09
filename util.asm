@@ -93,14 +93,14 @@ sider_lookup_file_hk proc
 
 sider_lookup_file_hk endp
 
-;000000014126DF00 | 49 63 00                           | movsxd rax,dword ptr ds:[r8]            | prep to write team info
-;000000014126DF03 | 83 F8 02                           | cmp eax,2                               |
-;000000014126DF06 | 7D 16                              | jge pes2018.14126DF1E                   |
-;000000014126DF08 | 4C 69 C0 20 05 00 00               | imul r8,rax,520                         |
-;000000014126DF0F | 48 81 C1 04 01 00 00               | add rcx,104                             |
-;000000014126DF16 | 49 03 C8                           | add rcx,r8                              |
-;000000014126DF19 | E9 D2 72 7D FF                     | jmp pes2018.140A451F0                   |
-;000000014126DF1E | C3                                 | ret                                     |
+;0000000150E98CB0 | 49 63 00                           | movsxd rax,dword ptr ds:[r8]         | at set team id
+;0000000150E98CB3 | 83 F8 02                           | cmp eax,2                            |
+;0000000150E98CB6 | 7D 16                              | jge pes2020.150E98CCE                |
+;0000000150E98CB8 | 4C 69 C0 54 06 00 00               | imul r8,rax,654                      |
+;0000000150E98CBF | 48 81 C1 38 01 00 00               | add rcx,138                          |
+;0000000150E98CC6 | 4C 01 C1                           | add rcx,r8                           |
+;0000000150E98CC9 | E9 12 0A DD EF                     | jmp pes2020.140C696E0                |
+;0000000150E98CCE | C3                                 | ret                                  |
 
 sider_set_team_id_hk proc
 
@@ -113,8 +113,8 @@ sider_set_team_id_hk proc
         mov     [rsp+30h],rax
         cmp     eax,2
         jge     done
-        imul    r8,rax,5ech
-        add     rcx,118h
+        imul    r8,rax,654h
+        add     rcx,138h
         add     rcx,r8
         mov     [rsp+20h],rcx
         mov     [rsp+28h],r8
@@ -189,7 +189,7 @@ sider_context_reset_hk proc
         push    r11
         sub     rsp,28h
         mov     qword ptr [rbx+84h],rcx
-        mov     qword ptr [rbx+21f74h],0ffffffffh
+        mov     qword ptr [rbx+201c4h],0ffffffffh
         call    sider_context_reset
         add     rsp,28h
         pop     r11
