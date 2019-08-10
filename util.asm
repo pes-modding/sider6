@@ -130,12 +130,10 @@ done:   add     rsp,40h
 
 sider_set_team_id_hk endp
 
-;000000014D930169 | 0F B6 82 97 00 00 00          | movzx eax,byte ptr ds:[rdx+97]           |
-;000000014D930170 | 88 81 97 00 00 00             | mov byte ptr ds:[rcx+97],al              |
-;000000014D930176 | 8B 82 98 00 00 00             | mov eax,dword ptr ds:[rdx+98]            |
-;000000014D93017C | 89 81 98 00 00 00             | mov dword ptr ds:[rcx+98],eax            |
-;000000014D930182 | 48 89 C8                      | mov rax,rcx                              | set_settings
-;000000014D930185 | C3                            | ret                                      |
+;0000000150E94EB3 | 48 8B 82 98 00 00 00               | mov rax,qword ptr ds:[rdx+98]        |
+;0000000150E94EBA | 48 89 81 98 00 00 00               | mov qword ptr ds:[rcx+98],rax        |
+;0000000150E94EC1 | 48 89 C8                           | mov rax,rcx                          | set_settings
+;0000000150E94EC4 | C3                                 | ret                                  |
 
 sider_set_settings_hk proc
 
@@ -147,10 +145,8 @@ sider_set_settings_hk proc
         push    r10
         push    r11
         sub     rsp,20h
-        movzx   eax,byte ptr [rdx+97h]
-        mov     byte ptr [rcx+97h],al
-        mov     eax,dword ptr [rdx+98h]
-        mov     dword ptr [rcx+98h],eax
+        mov     rax,qword ptr [rdx+98h]
+        mov     qword ptr [rcx+98h],rax
         call    sider_set_settings
         add     rsp,20h
         pop     r11
@@ -325,7 +321,7 @@ sider_set_stadium_choice_hk proc
         push    r9
         push    r10
         push    r11
-        sub     rsp,28h
+        sub     rsp,28h   ; we get here via jmp, but stack still needs correct alignment
         call    sider_set_stadium_choice
         add     rsp,28h
         pop     r11

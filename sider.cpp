@@ -164,10 +164,12 @@ struct MATCH_INFO_STRUCT {
     BYTE match_time;
     BYTE unknown3[3];
     DWORD unknown4[4];
-    BYTE db0x03;
+    BYTE unknown_zero;
+    BYTE num_subs; //subs
+    BYTE num_subs_et; //subs in extra time
     BYTE db0x17;
-    BYTE stadium_choice;
-    BYTE unknown5;
+    WORD stadium_choice;
+    WORD unknown5;
     DWORD unknown6[3];
     DWORD weather_effects;
     DWORD unknown7[10];
@@ -528,7 +530,7 @@ extern "C" STAD_INFO_STRUCT* sider_def_stadium_name(DWORD stadium_id);
 
 extern "C" void sider_def_stadium_name_hk();
 
-extern "C" void sider_set_stadium_choice(MATCH_INFO_STRUCT *mi, BYTE stadium_id);
+extern "C" void sider_set_stadium_choice(MATCH_INFO_STRUCT *mi, WORD stadium_id);
 
 extern "C" void sider_set_stadium_choice_hk();
 
@@ -2119,7 +2121,7 @@ bool module_set_match_time(module_t *m, DWORD *num_minutes)
     return res;
 }
 
-bool module_set_stadium_choice(module_t *m, BYTE stadium_id, BYTE *new_stadium_id)
+bool module_set_stadium_choice(module_t *m, WORD stadium_id, WORD *new_stadium_id)
 {
     bool res(false);
     if (m->evt_set_stadium_choice != 0) {
@@ -4272,14 +4274,14 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
 
 void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
 {
-    MATCH_INFO_STRUCT *mi = (MATCH_INFO_STRUCT*)((BYTE*)dest_ss - 0x6c);
-    bool ok = mi && (mi->db0x03 >= 0 && mi->db0x03 <=6 ) && (mi->db0x17 == 0x17 || mi->db0x17 == 0x12);
+    MATCH_INFO_STRUCT *mi = (MATCH_INFO_STRUCT*)((BYTE*)dest_ss - 0x70);
+    bool ok = mi && (mi->num_subs >= 0 && mi->num_subs <=6 ) && (mi->db0x17 == 0x17 || mi->db0x17 == 0x12);
     if (!ok) {
         // safety check
-        DBG(16) logu_("%02x %02x\n", mi->db0x03, mi->db0x17);
+        DBG(16) logu_("%02x %02x %02x\n", mi->num_subs, mi->num_subs_et, mi->db0x17);
         return;
     }
-    DBG(16) logu_("%02x %02x (ok)\n", mi->db0x03, mi->db0x17);
+    DBG(16) logu_("%02x %02x %02x (ok)\n", mi->num_subs, mi->num_subs_et, mi->db0x17);
 
     logu_("tournament_id: %d\n", mi->tournament_id_encoded);
 
@@ -4422,15 +4424,17 @@ char* sider_stadium_name(STAD_INFO_STRUCT *stad_info)
 
 STAD_INFO_STRUCT* sider_def_stadium_name(DWORD stadium_id)
 {
+    logu_("sider_def_stadium_name:: called for %d\n", stadium_id);
     memset(&_stadium_info, 0, sizeof(STAD_INFO_STRUCT));
     _stadium_info.id = stadium_id;
     strcpy((char*)&_stadium_info.name, "Unknown stadium");
     return &_stadium_info;
 }
 
-void sider_set_stadium_choice(MATCH_INFO_STRUCT *mi, BYTE stadium_choice)
+void sider_set_stadium_choice(MATCH_INFO_STRUCT *mi, WORD stadium_choice)
 {
     _stadium_choice_count++;
+    DBG(16) logu_("set_stadium_choice: mi->stadium_choice=%d, stadium_choice=%d\n", mi->stadium_choice, stadium_choice);
     mi->stadium_choice = stadium_choice;
     if (_stadium_choice_count % 2 == 1) {
         if (_config->_lua_enabled) {
@@ -4438,7 +4442,7 @@ void sider_set_stadium_choice(MATCH_INFO_STRUCT *mi, BYTE stadium_choice)
             list<module_t*>::iterator i;
             for (i = _modules.begin(); i != _modules.end(); i++) {
                 module_t *m = *i;
-                BYTE new_stadium_choice;
+                WORD new_stadium_choice;
                 if (module_set_stadium_choice(m, stadium_choice, &new_stadium_choice)) {
                     mi->stadium_choice = new_stadium_choice;
                     break;
@@ -4757,7 +4761,7 @@ void hook_call_rdx_with_head_and_tail_and_moved_call(BYTE *loc, BYTE *p, BYTE *h
     }
     DWORD protection = 0 ;
     DWORD newProtection = PAGE_EXECUTE_READWRITE;
-    if (VirtualProtect(loc, head_size + 12 + tail_size, newProtection, &protection)) {
+    if (VirtualProtect(loc, head_size + 12 + tail_size + 0x100, newProtection, &protection)) {
         int old_call_offs = *(int*)(moved_call_old + 1);
         memcpy(loc, head, head_size);   // head code
         memcpy(loc+head_size, "\x48\xba", 2);
@@ -4769,6 +4773,9 @@ void hook_call_rdx_with_head_and_tail_and_moved_call(BYTE *loc, BYTE *p, BYTE *h
         *(int*)(moved_call_new + 1) = new_call_offs;
 
         log_(L"hook_call_rdx_with_head_and_tail_and_moved_call: hooked at %p (target: %p)\n", loc, p);
+        //if (VirtualProtect(loc, head_size + 12 + tail_size, protection, &newProtection)) {
+        //    log_(L"restored page protection at: %p\n", loc);
+        //}
     }
 }
 
@@ -6186,14 +6193,14 @@ bool all_found(config_t *cfg) {
         //all = all && true;
         all = all && (
             cfg->_hp_at_set_team_id > 0 &&
-            //cfg->_hp_at_set_settings > 0 &&
+            cfg->_hp_at_set_settings > 0 &&
             //cfg->_hp_at_trophy_check > 0 &&
             //cfg->_hp_at_trophy_table > 0 &&
             cfg->_hp_at_ball_name > 0 &&
-            //cfg->_hp_at_stadium_name > 0 &&
-            //cfg->_hp_at_def_stadium_name > 0 &&
+            cfg->_hp_at_stadium_name > 0 &&
+            cfg->_hp_at_def_stadium_name > 0 &&
             cfg->_hp_at_context_reset > 0 &&
-            //cfg->_hp_at_set_stadium_choice > 0 &&
+            cfg->_hp_at_set_stadium_choice > 0 &&
             //cfg->_hp_at_check_kit_choice > 0 &&
             //cfg->_hp_at_get_uniparam > 0 &&
             cfg->_hp_at_data_ready > 0 &&
@@ -6295,18 +6302,18 @@ bool hook_if_all_found() {
 
         if (_config->_lua_enabled) {
             log_(L"-------------------------------\n");
-            /*
             log_(L"sider_set_team_id: %p\n", sider_set_team_id_hk);
             log_(L"sider_set_settings: %p\n", sider_set_settings_hk);
+            /*
             log_(L"sider_trophy_check: %p\n", sider_trophy_check_hk);
             log_(L"sider_trophy_table: %p\n", sider_trophy_table_hk);
-            log_(L"sider_context_reset: %p\n", sider_context_reset_hk);
             */
+            log_(L"sider_context_reset: %p\n", sider_context_reset_hk);
             log_(L"sider_ball_name: %p\n", sider_ball_name_hk);
-            /*
             log_(L"sider_stadium_name: %p\n", sider_stadium_name_hk);
             log_(L"sider_def_stadium_name: %p\n", sider_def_stadium_name_hk);
             log_(L"sider_set_stadium_choice: %p\n", sider_set_stadium_choice_hk);
+            /*
             log_(L"sider_check_kit_choice: %p\n", sider_check_kit_choice_hk);
             */
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
@@ -6330,11 +6337,11 @@ bool hook_if_all_found() {
                         (BYTE*)pattern_set_team_id_tail_2, sizeof(pattern_set_team_id_tail_2)-1);
                 }
             }
-            /*
             if (_config->_hook_set_settings)
                 hook_call_with_head_and_tail(_config->_hp_at_set_settings, (BYTE*)sider_set_settings_hk,
                     (BYTE*)pattern_set_settings_head, sizeof(pattern_set_settings_head)-1,
                     (BYTE*)pattern_set_settings_tail, sizeof(pattern_set_settings_tail)-1);
+            /*
             if (_config->_hook_trophy_check)
                 hook_call_rcx(_config->_hp_at_trophy_check, (BYTE*)sider_trophy_check_hk, 0);
             if (_config->_hook_trophy_table)
@@ -6342,17 +6349,21 @@ bool hook_if_all_found() {
             */
             if (_config->_hook_context_reset)
                 hook_call(_config->_hp_at_context_reset, (BYTE*)sider_context_reset_hk, 6);
+
             hook_call_with_head_and_tail(_config->_hp_at_ball_name, (BYTE*)sider_ball_name_hk,
                 (BYTE*)pattern_ball_name_head, sizeof(pattern_ball_name_head)-1,
                 (BYTE*)pattern_ball_name_tail, sizeof(pattern_ball_name_tail)-1);
-            /*
             hook_call_with_head_and_tail(_config->_hp_at_stadium_name, (BYTE*)sider_stadium_name_hk,
                 (BYTE*)pattern_stadium_name_head, sizeof(pattern_stadium_name_head)-1,
                 (BYTE*)pattern_stadium_name_tail, sizeof(pattern_stadium_name_tail)-1);
-            hook_call_with_head_and_tail(_config->_hp_at_set_stadium_choice, (BYTE*)sider_set_stadium_choice_hk,
-                (BYTE*)pattern_set_stadium_choice_head, sizeof(pattern_set_stadium_choice_head)-1,
-                (BYTE*)pattern_set_stadium_choice_tail, sizeof(pattern_set_stadium_choice_tail)-1);
-            */
+
+            BYTE *call_target = get_target_location2(_config->_hp_at_set_stadium_choice + 1);
+            if (call_target) {
+                hook_jmp(call_target, (BYTE*)sider_set_stadium_choice_hk, 0);
+            }
+            //hook_call_with_head_and_tail(_config->_hp_at_set_stadium_choice, (BYTE*)sider_set_stadium_choice_hk,
+            //    (BYTE*)pattern_set_stadium_choice_head, sizeof(pattern_set_stadium_choice_head)-1,
+            //    (BYTE*)pattern_set_stadium_choice_tail, sizeof(pattern_set_stadium_choice_tail)-1);
 
             // move next function (right after data_ready)
             move_code(_config->_hp_at_data_ready + 11, 1, 7);
@@ -6372,6 +6383,7 @@ bool hook_if_all_found() {
             hook_call_rcx(_config->_hp_at_set_team_for_kits, (BYTE*)sider_set_team_for_kits_hk, 2);
             hook_call(_config->_hp_at_clear_team_for_kits, (BYTE*)sider_clear_team_for_kits_hk, 1);
             hook_call_rdx(_config->_hp_at_uniparam_loaded, (BYTE*)sider_loaded_uniparam_hk, 0);
+            */
 
             BYTE *old_moved_call = _config->_hp_at_def_stadium_name + def_stadium_name_moved_call_offs_old;
             BYTE *new_moved_call = _config->_hp_at_def_stadium_name + def_stadium_name_moved_call_offs_new;
@@ -6380,7 +6392,6 @@ bool hook_if_all_found() {
                 (BYTE*)pattern_def_stadium_name_head, sizeof(pattern_def_stadium_name_head)-1,
                 (BYTE*)pattern_def_stadium_name_tail, sizeof(pattern_def_stadium_name_tail)-1,
                 old_moved_call, new_moved_call);
-            */
             log_(L"-------------------------------\n");
         }
 

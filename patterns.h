@@ -111,27 +111,26 @@ static BYTE check_set_team_id_2[3] = "\x7d\x26";
 static int offs_check_set_team_id = -2;
 
 /*
-000000014ACD9D36 | 8B 82 98 00 00 00                    | mov eax,dword ptr ds:[rdx+98]        |
-000000014ACD9D3C | 89 81 98 00 00 00                    | mov dword ptr ds:[rcx+98],eax        |
-000000014ACD9D42 | 48 89 C8                             | mov rax,rcx                          | set_settings
-000000014ACD9D45 | C3                                   | ret                                  |
+0000000150E94EB3 | 48 8B 82 98 00 00 00               | mov rax,qword ptr ds:[rdx+98]        |
+0000000150E94EBA | 48 89 81 98 00 00 00               | mov qword ptr ds:[rcx+98],rax        |
+0000000150E94EC1 | 48 89 C8                           | mov rax,rcx                          | set_settings
+0000000150E94EC4 | C3                                 | ret                                  |
 */
-static BYTE pattern_set_settings[17] =
-    "\x8b\x82\x98\x00\x00\x00"
-    "\x89\x81\x98\x00\x00\x00"
+static BYTE pattern_set_settings[19] =
+    "\x48\x8b\x82\x98\x00\x00\x00"
+    "\x48\x89\x81\x98\x00\x00\x00"
     "\x48\x8b\xc1"
     "\xc3";
-static BYTE pattern2_set_settings[17] =
-    "\x8b\x82\x98\x00\x00\x00"
-    "\x89\x81\x98\x00\x00\x00"
+static BYTE pattern2_set_settings[19] =
+    "\x48\x8b\x82\x98\x00\x00\x00"
+    "\x48\x89\x81\x98\x00\x00\x00"
     "\x48\x89\xc8"
     "\xc3";
-static int offs_set_settings = -13;
+static int offs_set_settings = 0;
 static BYTE pattern_set_settings_head[2] =
     "\x50";  // push rax
-static BYTE pattern_set_settings_tail[13] =
-    "\x58"   // pop rax
-    "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
+static BYTE pattern_set_settings_tail[2] =
+    "\x58";   // pop rax
 
 /*
 000000015110A827 | 4C 8D A5 F0 C3 00 00                  | lea r12,qword ptr ss:[rbp+C3F0] |
@@ -266,32 +265,32 @@ static BYTE pattern_dxgi[20] =
 static int offs_dxgi = 0x1a;
 
 /*
-000000014136B3F0 | 88 51 32                             | mov byte ptr ds:[rcx+32],dl            | write stadium choice
-000000014136B3F3 | C3                                   | ret                                    |
-000000014136B3F4 | CC                                   | int3                                   |
-000000014136B3F5 | CC                                   | int3                                   |
-000000014136B3F6 | CC                                   | int3                                   |
-000000014136B3F7 | CC                                   | int3                                   |
-000000014136B3F8 | CC                                   | int3                                   |
-000000014136B3F9 | CC                                   | int3                                   |
-000000014136B3FA | CC                                   | int3                                   |
-000000014136B3FB | CC                                   | int3                                   |
-000000014136B3FC | CC                                   | int3                                   |
-000000014136B3FD | CC                                   | int3                                   |
-000000014136B3FE | CC                                   | int3                                   |
-000000014136B3FF | CC                                   | int3                                   |
+0000000140A9F54E | C6 45 BB 01                        | mov byte ptr ss:[rbp-45],1           |
+0000000140A9F552 | 0F B7 D3                           | movzx edx,bx                         |
+0000000140A9F555 | 48 8B CF                           | mov rcx,rdi                          |
+0000000140A9F558 | E8 23 BF 45 00                     | call pes2020.140EFB480               |
+...
+0000000140EFB480 | E9 BB B0 01 10                     | jmp pes2020.150F16540                | to set stadium choice (from dx)
+0000000140EFB485 | CC                                 | int3                                 |
+0000000140EFB486 | CC                                 | int3                                 |
+0000000140EFB487 | CC                                 | int3                                 |
+0000000140EFB488 | CC                                 | int3                                 |
+0000000140EFB489 | CC                                 | int3                                 |
+0000000140EFB48A | CC                                 | int3                                 |
+0000000140EFB48B | CC                                 | int3                                 |
+0000000140EFB48C | CC                                 | int3                                 |
+0000000140EFB48D | CC                                 | int3                                 |
+0000000140EFB48E | CC                                 | int3                                 |
+...
+0000000150F16540 | 66 89 51 34                        | mov word ptr ds:[rcx+34],dx          | set stadium choice
+0000000150F16544 | C3                                 | ret                                  |
 */
-static BYTE pattern_set_stadium_choice[17] =
-    "\x88\x51\x32"
-    "\xc3"
-    "\xcc\xcc\xcc\xcc"
-    "\xcc\xcc\xcc\xcc"
-    "\xcc\xcc\xcc\xcc";
-static int offs_set_stadium_choice = 0;
-static BYTE pattern_set_stadium_choice_head[2] =
-    "\x50";
-static BYTE pattern_set_stadium_choice_tail[3] =
-    "\x58\xc3";
+static BYTE pattern_set_stadium_choice[12] =
+    "\xc6\x45\xbb\x01"
+    "\x0f\xb7\xd3"
+    "\x48\x8b\xcf"
+    "\xe8";
+static int offs_set_stadium_choice = 10;
 
 /*
 000000014CFE6503 | 80 79 08 00             | cmp byte ptr ds:[rcx+8],0              | before stadium name copy
@@ -320,43 +319,43 @@ static BYTE pattern_stadium_name_head[3] = "\x50\x50";
 static BYTE pattern_stadium_name_tail[4] = "\x58\x58\x90";
 
 /*
-000000014D015305 | 44 0F B6 80 DA 03 00 00              | movzx r8d,byte ptr ds:[rax+3DA]        |
-000000014D01530D | 44 39 C5                             | cmp ebp,r8d                            |
-000000014D015310 | 75 3A                                | jne pes2019.14D01534C                  |
-000000014D015312 | 48 89 C1                             | mov rcx,rax                            |
+00000001512FEF85 | 44 0F B7 80 58 02 00 00            | movzx r8d,word ptr ds:[rax+258]      |
+00000001512FEF8D | 44 39 C5                           | cmp ebp,r8d                          | near def stadium name
+00000001512FEF90 | 75 3A                              | jne pes2020.1512FEFCC                |
+00000001512FEF92 | 48 89 C1                           | mov rcx,rax                          |
 ...
-000000014D01535D | 48 85 C0                             | test rax,rax                           | before find stadium info
-000000014D015360 | 74 0D                                | je pes2019.14D01536F                   |
-000000014D015362 | 48 89 F2                             | mov rdx,rsi                            | rdx:DbgUiRemoteBreakin
-000000014D015365 | 48 89 C1                             | mov rcx,rax                            |
-000000014D015368 | E8 A3 EE F6 F4                       | call pes2019.141F84210                 |
-000000014D01536D | EB 12                                | jmp pes2019.14D015381                  |
-000000014D01536F | 45 31 C0                             | xor r8d,r8d                            |
-000000014D015372 | 48 8D 15 19 26 52 F5                 | lea rdx,qword ptr ds:[142537992]       | rdx:DbgUiRemoteBreakin
-000000014D015379 | 48 89 F1                             | mov rcx,rsi                            |
-000000014D01537C | E8 BF D5 49 F3                       | call pes2019.1404B2940                 |
-000000014D015381 | 48 8B 5C 24 30                       | mov rbx,qword ptr ss:[rsp+30]          |
+00000001512FEFDD | 48 85 C0                           | test rax,rax                         | before find stadium info
+00000001512FEFE0 | 74 0D                              | je pes2020.1512FEFEF                 |
+00000001512FEFE2 | 48 89 F2                           | mov rdx,rsi                          | rdx:DbgUiRemoteBreakin
+00000001512FEFE5 | 48 89 C1                           | mov rcx,rax                          |
+00000001512FEFE8 | E8 93 29 8A F0                     | call pes2020.141BA1980               |
+00000001512FEFED | EB 12                              | jmp pes2020.1512FF001                |
+00000001512FEFEF | 45 31 C0                           | xor r8d,r8d                          |
+00000001512FEFF2 | 48 8D 15 3D 50 DA F0               | lea rdx,qword ptr ds:[1420A4036]     | rdx:DbgUiRemoteBreakin
+00000001512FEFF9 | 48 89 F1                           | mov rcx,rsi                          |
+00000001512FEFFC | E8 3F 0E 0F EF                     | call pes2020.1403EFE40               |
+00000001512FF001 | 48 8B 5C 24 30                     | mov rbx,qword ptr ss:[rsp+30]        |
 */
 // becomes:
 /*
-000000014D01535D | 48 85 C0                             | test rax,rax                           | before find stadium info
-000000014D015360 | 75 0C                                | jne pes2019.14D01536E                  |
-000000014D015362 | 48 BA 30 20 10 FF FF 07 00 00        | mov rdx,7FFFF102030                    | rdx:DbgUiRemoteBreakin
-000000014D01536C | FF D2                                | call rdx                               | rdx:DbgUiRemoteBreakin
-000000014D01536E | 48 8B D6                             | mov rdx,rsi                            | rdx:DbgUiRemoteBreakin
-000000014D015371 | 48 8B C8                             | mov rcx,rax                            |
-000000014D015374 | E8 97 EE F6 F4                       | call pes2019.141F84210                 |
-000000014D015379 | EB 06                                | jmp pes2019.14D015381                  |
-000000014D01537B | 90                                   | nop                                    |
-000000014D01537C | E8 BF D5 49 F3                       | call pes2019.1404B2940                 |
-000000014D015381 | 48 8B 5C 24 30                       | mov rbx,qword ptr ss:[rsp+30]          |
+00000001512FEFDD | 48 85 C0                           | test rax,rax                         |
+00000001512FEFE0 | 75 0C                              | jne pes2020.1512FEFEE                |
+00000001512FEFE2 | 48 BA C2 0B D7 31 F8 7F 00 00      | mov rdx,sider.7FF831D70BC2           | rdx:DbgUiRemoteBreakin
+00000001512FEFEC | FF D2                              | call rdx                             | rdx:DbgUiRemoteBreakin
+00000001512FEFEE | 48 8B D6                           | mov rdx,rsi                          | rdx:DbgUiRemoteBreakin
+00000001512FEFF1 | 48 8B C8                           | mov rcx,rax                          |
+00000001512FEFF4 | E8 87 29 8A F0                     | call pes2020.141BA1980               |
+00000001512FEFF9 | EB 06                              | jmp pes2020.1512FF001                |
+00000001512FEFFB | 90                                 | nop                                  |
+00000001512FEFFC | E8 3F 0E 0F EF                     | call pes2020.1403EFE40               |
+00000001512FF001 | 48 8B 5C 24 30                     | mov rbx,qword ptr ss:[rsp+30]        |
 */
 static BYTE pattern_def_stadium_name[9] = //[17] =
-    "\x44\x0f\xb6\x80\xda\x03\x00\x00";
-    //"\x44\x39\xc5"
-    //"\x75\x3a"
-    //"\x48\x89\xc1";
-static int offs_def_stadium_name = 0x5b;
+    //"\x44\x0f\xb6\x80\xda\x03\x00\x00";
+    "\x44\x39\xc5"
+    "\x75\x3a"
+    "\x48\x89\xc1";
+static int offs_def_stadium_name = 0x53;
 static BYTE pattern_def_stadium_name_head[3] = "\x75\x0c";
 static BYTE pattern_def_stadium_name_tail[15] =
     "\x48\x8b\xd6"
