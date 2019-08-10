@@ -170,8 +170,10 @@ struct MATCH_INFO_STRUCT {
     BYTE db0x17;
     WORD stadium_choice;
     WORD unknown5;
-    DWORD unknown6[3];
-    DWORD weather_effects;
+    DWORD timeofday_choice; // 0-day, 1-night
+    DWORD weather_choice;   // 0-fine, 1-rainy, 2-snow
+    DWORD weather_effects; // 0-nothing, 1-later, 2-now
+    DWORD season_choice; // 0-summer, 1-winter
     DWORD unknown7[10];
     struct STAD_STRUCT stad;
     DWORD unknown8;
