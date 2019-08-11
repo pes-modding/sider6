@@ -160,7 +160,8 @@ struct MATCH_INFO_STRUCT {
     BYTE unknown0[3];
     BYTE match_info;
     BYTE unknown1[3];
-    DWORD unknown2[2];
+    DWORD unknown2;
+    DWORD difficulty;
     BYTE match_time;
     BYTE unknown3[3];
     DWORD unknown4[3];
@@ -235,7 +236,7 @@ const char *_context_fields[] = {
     "match_id", "match_info", "match_leg", "match_time",
     "away_team", "home_team", "stadium_choice", "stadium",
     "weather", "weather_effects", "timeofday", "season",
-    "tournament_id", "mis",
+    "tournament_id", "mis", "difficulty", "extra_time", "penalty_shootout",
 };
 size_t _context_fields_count = sizeof(_context_fields)/sizeof(const char *);
 
@@ -1673,6 +1674,7 @@ struct module_t {
     int evt_set_stadium_choice;
     int evt_set_stadium;
     int evt_set_conditions;
+    int evt_set_match_settings;
     int evt_after_set_conditions;
     /*
     int evt_set_stadium_for_replay;
@@ -2195,6 +2197,50 @@ bool module_set_stadium(module_t *m, MATCH_INFO_STRUCT *mi)
     return res;
 }
 
+bool module_set_match_settings(module_t *m, MATCH_INFO_STRUCT *mi)
+{
+    bool res(false);
+    if (m->evt_set_match_settings != 0) {
+        EnterCriticalSection(&_cs);
+        lua_pushvalue(m->L, m->evt_set_match_settings);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        lua_newtable(L);
+        lua_pushinteger(L, mi->difficulty);
+        lua_setfield(L, -2, "difficulty");
+        lua_pushinteger(L, mi->extra_time_choice);
+        lua_setfield(L, -2, "extra_time");
+        lua_pushinteger(L, mi->penalty_shootout_choice);
+        lua_setfield(L, -2, "penalty_shootout");
+        if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+        }
+        else if (lua_istable(L, -1)) {
+            lua_getfield(L, -1, "difficulty");
+            if (lua_isnumber(L, -1)) {
+                mi->difficulty = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            lua_getfield(L, -1, "extra_time");
+            if (lua_isnumber(L, -1)) {
+                mi->extra_time_choice = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            lua_getfield(L, -1, "penalty_shootout");
+            if (lua_isnumber(L, -1)) {
+                mi->penalty_shootout_choice = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            res = true;
+        }
+        lua_pop(L, 1);
+        LeaveCriticalSection(&_cs);
+    }
+    return res;
+}
+
 bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
 {
     bool res(false);
@@ -2216,10 +2262,6 @@ bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
         lua_setfield(L, -2, "weather_effects");
         lua_pushinteger(L, ss->season);
         lua_setfield(L, -2, "season");
-        lua_pushinteger(L, mi->extra_time_choice);
-        lua_setfield(L, -2, "extra_time");
-        lua_pushinteger(L, mi->penalty_shootout_choice);
-        lua_setfield(L, -2, "penalty_shootout");
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
@@ -2238,16 +2280,6 @@ bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
             lua_getfield(L, -1, "weather_effects");
             if (lua_isnumber(L, -1)) {
                 mi->weather_effects = luaL_checkinteger(L, -1);
-            }
-            lua_pop(L, 1);
-            lua_getfield(L, -1, "extra_time");
-            if (lua_isnumber(L, -1)) {
-                mi->extra_time_choice = luaL_checkinteger(L, -1);
-            }
-            lua_pop(L, 1);
-            lua_getfield(L, -1, "penalty_shootout");
-            if (lua_isnumber(L, -1)) {
-                mi->penalty_shootout_choice = luaL_checkinteger(L, -1);
             }
             lua_pop(L, 1);
             lua_getfield(L, -1, "season");
@@ -4340,6 +4372,17 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
         set_context_field_int("weather_effects", mi->weather_effects);
         set_context_field_int("season", dest_ss->season);
 
+        for (i = _modules.begin(); i != _modules.end(); i++) {
+            module_t *m = *i;
+            if (module_set_match_settings(m, mi)) {
+                break;
+            }
+        }
+
+        set_context_field_int("difficulty", mi->difficulty);
+        set_context_field_int("extra_time", mi->extra_time_choice);
+        set_context_field_int("penalty_shootout", mi->penalty_shootout_choice);
+
         // clear stadium_choice in context
         //set_context_field_nil("stadium_choice");
         //_had_stadium_choice = false;
@@ -5269,6 +5312,12 @@ static int sider_context_register(lua_State *L)
         lua_pushvalue(L, -1);
         lua_xmove(L, _curr_m->L, 1);
         _curr_m->evt_set_conditions = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
+    else if (strcmp(event_key, "set_match_settings")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_set_match_settings = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
     else if (strcmp(event_key, "after_set_conditions")==0) {
