@@ -163,7 +163,11 @@ struct MATCH_INFO_STRUCT {
     DWORD unknown2[2];
     BYTE match_time;
     BYTE unknown3[3];
-    DWORD unknown4[4];
+    DWORD unknown4[3];
+    BYTE extra_time_choice;
+    BYTE unknown8;
+    BYTE unknown9;
+    BYTE penalty_shootout_choice;
     BYTE unknown_zero;
     BYTE num_subs; //subs
     BYTE num_subs_et; //subs in extra time
@@ -176,8 +180,8 @@ struct MATCH_INFO_STRUCT {
     DWORD season_choice; // 0-summer, 1-winter
     DWORD unknown7[10];
     struct STAD_STRUCT stad;
-    DWORD unknown8;
-    BYTE unknown9[0x98];
+    DWORD unknown10;
+    BYTE unknown11[0x98];
     TEAM_INFO_STRUCT home;
     TEAM_INFO_STRUCT away;
 };
@@ -2212,6 +2216,10 @@ bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
         lua_setfield(L, -2, "weather_effects");
         lua_pushinteger(L, ss->season);
         lua_setfield(L, -2, "season");
+        lua_pushinteger(L, mi->extra_time_choice);
+        lua_setfield(L, -2, "extra_time");
+        lua_pushinteger(L, mi->penalty_shootout_choice);
+        lua_setfield(L, -2, "penalty_shootout");
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
@@ -2230,6 +2238,16 @@ bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
             lua_getfield(L, -1, "weather_effects");
             if (lua_isnumber(L, -1)) {
                 mi->weather_effects = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            lua_getfield(L, -1, "extra_time");
+            if (lua_isnumber(L, -1)) {
+                mi->extra_time_choice = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            lua_getfield(L, -1, "penalty_shootout");
+            if (lua_isnumber(L, -1)) {
+                mi->penalty_shootout_choice = luaL_checkinteger(L, -1);
             }
             lua_pop(L, 1);
             lua_getfield(L, -1, "season");
