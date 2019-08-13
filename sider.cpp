@@ -168,7 +168,7 @@ struct MATCH_INFO_STRUCT {
     BYTE extra_time_choice;
     BYTE unknown8;
     BYTE unknown9;
-    BYTE penalty_shootout_choice;
+    BYTE penalties;
     BYTE unknown_zero;
     BYTE num_subs; //subs
     BYTE num_subs_et; //subs in extra time
@@ -236,7 +236,7 @@ const char *_context_fields[] = {
     "match_id", "match_info", "match_leg", "match_time",
     "away_team", "home_team", "stadium_choice", "stadium",
     "weather", "weather_effects", "timeofday", "season",
-    "tournament_id", "mis", "difficulty", "extra_time", "penalty_shootout",
+    "tournament_id", "mis", "difficulty", "extra_time", "penalties",
 };
 size_t _context_fields_count = sizeof(_context_fields)/sizeof(const char *);
 
@@ -1264,9 +1264,9 @@ public:
             L"start.minimized", _start_minimized,
             config_ini);
 
-        _free_side_select = GetPrivateProfileInt(_section_name.c_str(),
-            L"free.side.select", _free_side_select,
-            config_ini);
+        //_free_side_select = GetPrivateProfileInt(_section_name.c_str(),
+        //    L"free.side.select", _free_side_select,
+        //    config_ini);
 
         _overlay_enabled = GetPrivateProfileInt(_section_name.c_str(),
             L"overlay.enabled", _overlay_enabled,
@@ -2211,8 +2211,8 @@ bool module_set_match_settings(module_t *m, MATCH_INFO_STRUCT *mi)
         lua_setfield(L, -2, "difficulty");
         lua_pushinteger(L, mi->extra_time_choice);
         lua_setfield(L, -2, "extra_time");
-        lua_pushinteger(L, mi->penalty_shootout_choice);
-        lua_setfield(L, -2, "penalty_shootout");
+        lua_pushinteger(L, mi->penalties);
+        lua_setfield(L, -2, "penalties");
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
@@ -2228,9 +2228,9 @@ bool module_set_match_settings(module_t *m, MATCH_INFO_STRUCT *mi)
                 mi->extra_time_choice = luaL_checkinteger(L, -1);
             }
             lua_pop(L, 1);
-            lua_getfield(L, -1, "penalty_shootout");
+            lua_getfield(L, -1, "penalties");
             if (lua_isnumber(L, -1)) {
-                mi->penalty_shootout_choice = luaL_checkinteger(L, -1);
+                mi->penalties = luaL_checkinteger(L, -1);
             }
             lua_pop(L, 1);
             res = true;
@@ -3105,7 +3105,7 @@ void prep_stuff()
     DX11.Device->CreateBlendState(&BlendState, &g_pBlendState);
 
     // default to automatic font size
-    _font_size = DX11.Height/40.0;
+    _font_size = DX11.Height/45.0;
     if (_config->_overlay_font_size > 0) {
         _font_size = (float)_config->_overlay_font_size;
     }
@@ -4381,7 +4381,7 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
 
         set_context_field_int("difficulty", mi->difficulty);
         set_context_field_int("extra_time", mi->extra_time_choice);
-        set_context_field_int("penalty_shootout", mi->penalty_shootout_choice);
+        set_context_field_int("penalties", mi->penalties);
 
         // clear stadium_choice in context
         //set_context_field_nil("stadium_choice");
@@ -6085,7 +6085,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[9] = 0; //sizeof(pattern_set_min_time)-1;
     frag_len[10] = sizeof(pattern_set_max_time)-1;
     frag_len[11] = (_config->_num_minutes > 0) ? sizeof(pattern_set_minutes)-1 : 0;
-    frag_len[12] = _config->_free_side_select ? sizeof(pattern_sider)-1 : 0;
+    frag_len[12] = 0; //_config->_free_side_select ? sizeof(pattern_sider)-1 : 0;
     frag_len[13] = _config->_lua_enabled ? sizeof(pattern_trophy_table)-1 : 0;
     frag_len[14] = _config->_lua_enabled ? sizeof(pattern_ball_name)-1 : 0;
     frag_len[15] = _config->_overlay_enabled ? sizeof(pattern_dxgi)-1 : 0;
