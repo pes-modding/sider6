@@ -1264,9 +1264,9 @@ public:
             L"start.minimized", _start_minimized,
             config_ini);
 
-        //_free_side_select = GetPrivateProfileInt(_section_name.c_str(),
-        //    L"free.side.select", _free_side_select,
-        //    config_ini);
+        _free_side_select = GetPrivateProfileInt(_section_name.c_str(),
+            L"free.side.select", _free_side_select,
+            config_ini);
 
         _overlay_enabled = GetPrivateProfileInt(_section_name.c_str(),
             L"overlay.enabled", _overlay_enabled,
@@ -6085,7 +6085,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[9] = 0; //sizeof(pattern_set_min_time)-1;
     frag_len[10] = sizeof(pattern_set_max_time)-1;
     frag_len[11] = (_config->_num_minutes > 0) ? sizeof(pattern_set_minutes)-1 : 0;
-    frag_len[12] = 0; //_config->_free_side_select ? sizeof(pattern_sider)-1 : 0;
+    frag_len[12] = 0; //_config->_free_side_select ? sizeof(pattern_sider)-1 : 0;  //disabled for now
     frag_len[13] = _config->_lua_enabled ? sizeof(pattern_trophy_table)-1 : 0;
     frag_len[14] = _config->_lua_enabled ? sizeof(pattern_ball_name)-1 : 0;
     frag_len[15] = _config->_overlay_enabled ? sizeof(pattern_dxgi)-1 : 0;
