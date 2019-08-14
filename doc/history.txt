@@ -2,6 +2,14 @@ Sider 6 Release History
 =======================
 
 
+August 13, 2019
+v6.0.1
+- most of Lua scripting engine is supported (except for "kits"), including overlay
+- camera module with Fanview camera controls and replays on/off switch
+- new event: "set_match_settings" - allows to enable extra time and penalties,
+  as well as set difficulty to 6 (Legend?)
+
+
 August 2, 2019
 v6.0.0
 - support for setting number of match minutes to more than 5

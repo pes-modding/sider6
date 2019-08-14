@@ -1,7 +1,7 @@
-Sider 5 Lua Module Programmers Guide
+Sider 6 Lua Module Programmers Guide
 ====================================
-For sider.dll version: 5.4.2
-June 15, 2019
+For sider.dll version: 6.0.1
+August 13, 2019
 
 
 
@@ -104,7 +104,7 @@ of the game. As more scripts/modules are created by the community
 the context object will probably also change, and include more and more
 information about the game.
 
-As of 5.4.0 release, the context object has the following:
+As of 6.0.1 release, the context object has the following:
 
 ctx.home_team  - id of the home team of the current match, after
                  it is selected in the exhibition match, or the next
@@ -167,8 +167,12 @@ ctx.weather_effects - The known values are:
 
 ctx.match_time - Duration of the match in minutes.
 
-ctx.kits       - table of functions for kit manipulation.
-                 (See more details further down)
+ctx.difficulty - Difficulty that was chosen
+                    0 - Beginner ... 6 - Legend
+
+ctx.extra_time - 0/1 flag to indicate if extra time will be played
+
+ctx.penalties  - 0/1 flag to indicate if penalty shootout will be played
 
 
 The context object also contains a register function, which has the
@@ -185,74 +189,6 @@ supported events and their handler signatures
 The idea of the context object is that in your handler functions, your
 code will make decisions on what to do, using the information in the
 context.
-
-
-ctx.kits
-========
-
-It is a table of helper functions to manipulate kits (uniforms).
-IMPORTANT NOTE: kit operations only work for "licensed" teams, in other
-words, for those that have real kits, not ones made in game editor.
-If your team is unlicensed - use Kit Studio by zlac to convert it
-to a licensed team.
-The table contains the following functions:
-
-
-ctx.kits.get_current_team(home_or_away)
-
-Returns the team id for the currently chosen home or away team -
-depending on the parameter that you pass in:
-    0 - home team
-    1 - away team
-
-
-ctx.kits.get_current_kit_id(home_or_away)
-
-Returns the currently chosen player kit_id for home or away team -
-depending on the parameter that you pass in:
-    0 - home team
-    1 - away team
-
-
-ctx.kits.get(team_id, kit_id)
-
-Returns a table of attributes for a player kit for specified team
-and kit_id. The kit_id can range from 0 to 9. The returned table
-contains all attributes for the requested kit - things like:
-Collar, KitModel, KitFile, BackNumbersFile, and so for. We call
-this collection of attributes a "kit config".
-
-
-ctx.kits.set(team_id, kit_id, kit_cfg, home_or_away)
-
-Sets the kit attributes to the values provided in kit_cfg table,
-for the chosen team and kit. The last parameter is optional: if
-you specify it, then use 0 - for home team, 1 - for away team,
-and sider will update parts of team info in memory that control
-the color of radar. This allows for correct radar colors, and
-also for proper color-matching, when kits are initially chosen
-by the game logic, in such a way that they don't clash.
-
-
-ctx.kits.get_gk(team_id)
-
-Returns a table of attributes for a goalkeeper kit for specified team
-The returned table contains all attributes for the kit, like it is
-with a player kit.
-
-
-ctx.kits.set_gk(team_id, kit_cfg)
-
-Sets the kit attributes to the values provided in kit_cfg table,
-for the chosen team and goalkeeper kit.
-
-
-ctx.kits.refresh(home_or_away)
-
-Forces a refresh of the kit for either home or away team -
-depending on the value of the parameter:
-    0 - home team
-    1 - away team
 
 
 
@@ -339,42 +275,6 @@ you can use "offset" and "total_size" parameters to check what part
 of the file was read.
 
 
-- Event name: "livecpk_read"
-Handler function: f(ctx, filename, data, size, total_size, offset)
-Return value: nil.
-
-This event is similar to livecpk_data_ready, but it happens on a lower
-level of logic: when the actual read operations occur. It is still
-supported for backwards compatibility, but in practice you will
-probably never need to use it (unless you are interested in tracing
-the actual reads). Instead, read about "livecpk_data_ready" - this
-is probably what you actually want :-)
-
-If you do use "livecpk_read" event, be aware that it happends BEFORE
-the data is fully ready for processing by the game. For example, if
-data is read from a CPK file with compression enabled, then you will
-see the bytes as they are stored in CPK, but not decompressed yet.
-So instead of actual data you will see a compressed stream with a
-"CRILAYLA" header.
-
-Multiple reads can be used for the same file, if it is bigger
-than certain size, or the game logic reads it in parts.
-
-The "data" param is a pointer to the buffer in memory that have just
-been filled with data. The "size" parameter gives the number of
-bytes that have just been read into that buffer. The other parameters
-provide the additional context for the read:
-
-    - filename: the relative pathname of the file,
-        (For example, "common\pesdb\etc\Team.bin")
-    - total_size: total size (in bytes) expected to be read
-        eventually for this file
-    - offset: offset in file before the read happened
-
-See "fileevents.lua" module for an example usage of
-this event.
-
-
 - Event name: "set_teams"
 Handler function: f(ctx, home_team, away_team)
 Return value expected: nil
@@ -387,21 +287,6 @@ The team ids are also set as "home_team" and "away_team" fields in
 the context object so that they can be used later, if needed.
 
 
-- Event name: "set_kits"
-Handler function: f(ctx, home_kit_attributes, away_kit_attributes)
-Two return values are expected:
-    a table of modified kit attributes for home team,
-    a table of modified kit attributes for away team.
-The return tables do not need to have all attributes provided, but
-only the ones that you want to change for corresponding kit.
-You can also return nothing, nil, or a pair of nil values
-
-This event happens when the home and away kit have been chosen
-by the game logic, which typically happens just before the pre-game
-menu screen is shown with players from home and away team showing
-the kits to be used in the match.
-
-
 - Event name: "set_match_time"
 Handler function: f(ctx, minutes)
 Return value expected: nil or integer
@@ -409,7 +294,7 @@ Return value expected: nil or integer
 This event occurs, when the game sets the mach duration. If your handler
 function returns an integer, then this value will be used as the match
 time in minutes. This way you can accelerate or slow down the matches
-beyound the allowed 5-30 minute range. See timeaccel.lua - for an example
+beyound the allowed 5-30 minute range. See matchtime.lua - for an example
 of such script.
 
 
@@ -484,6 +369,27 @@ stops further propagation of the event. You cannot change the stadium id -
 for that use "set_stadium" event. But you can change any of the other
 three settings: just assign them different values.
 For an example usage - see stadswitch.lua module.
+
+
+- Event name: "set_match_settings"
+Handler function: f(ctx, options)
+Return value expected: nil or table
+
+This event fires, after the match settings had been chosen for the upcoming
+match. The "options" parameter is a Lua table which contains the following
+keys: "difficulty", "extra_time", "penalties".
+Each of these has an integer value, as the game uses:
+for difficulty:
+    0 - Beginner, 1 - Amateur, 2 - Regular, 3 - Professional,
+    4 - Top Player, 5 - Super Star, 6 - Legend
+for extra_time: 0 - off, 1 - on
+for penalties: 0 - off, 1 - on
+
+You handler function can either return nil, which means that other modules
+can receive the event and process it. Or, the handler can return a table
+of options, which are either modified or not. Returning a table of options
+stops further propagation of the event.
+For an example usage - see matchset.lua module.
 
 
 - Event name: "after_set_conditions"
@@ -800,7 +706,7 @@ Depending on the type of value, the output differs slightly:
 
 memory.get_process_info()
 
-This function queries the game process (PES2019.exe) for information
+This function queries the game process (PES2020.exe) for information
 about where it is loaded in memory.
 Return value: a table containing at least two keys:
     "base" - base address of the main process in memory
