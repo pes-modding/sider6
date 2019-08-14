@@ -233,7 +233,7 @@ void lua_reload_modified_modules();
 static void push_env_table(lua_State *L, const wchar_t *script_name);
 
 const char *_context_fields[] = {
-    "match_id", "match_info", "match_leg", "match_time",
+    "match_id", "match_info", "match_leg",// "match_time",
     "away_team", "home_team", "stadium_choice", "stadium",
     "weather", "weather_effects", "timeofday", "season",
     "tournament_id", "mis", "difficulty", "extra_time", "penalties",
@@ -4304,7 +4304,7 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
         else {
             _tournament_id = mi->tournament_id_encoded;
             set_context_field_int("tournament_id", mi->tournament_id_encoded);
-            set_context_field_int("match_time", mi->match_time);
+            //set_context_field_int("match_time", mi->match_time);
             set_context_field_int("stadium_choice", mi->stadium_choice);
             set_match_info(mi);
 
@@ -4348,7 +4348,8 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
             DWORD num_minutes = mi->match_time;
             if (module_set_match_time(m, &num_minutes)) {
                 mi->match_time = num_minutes;
-                set_context_field_int("match_time", mi->match_time);
+                //set_context_field_int("match_time", mi->match_time);
+                break;
             }
         }
         for (i = _modules.begin(); i != _modules.end(); i++) {
