@@ -20,27 +20,26 @@ end
 
 function m.set_teams(ctx, home, away)
     tlog("teams: %d vs %d", home, away)
-    tlog("ctx: %s", t2s(ctx))
 end
 
 function m.set_match_time(ctx, num_minutes)
     tlog("match_time: %d", num_minutes)
-    tlog("ctx: %s", t2s(ctx))
 end
 
 function m.set_stadium_choice(ctx, stadium_choice)
     tlog("set_stadium_choice: %d", stadium_choice)
-    tlog("ctx: %s", t2s(ctx))
 end
 
 function m.set_stadium(ctx, options)
     tlog("set_stadium: %s", t2s(options))
-    tlog("ctx: %s", t2s(ctx))
 end
 
 function m.set_conditions(ctx, options)
     tlog("set_conditions: %s", t2s(options))
-    tlog("ctx: %s", t2s(ctx))
+end
+
+function m.set_match_settings(ctx, options)
+    tlog("set_match_settings: %s", t2s(options))
 end
 
 function m.after_set_conditions(ctx)
@@ -70,6 +69,7 @@ function m.init(ctx)
     ctx.register("set_stadium_choice", m.set_stadium_choice)
     ctx.register("set_stadium", m.set_stadium)
     ctx.register("set_conditions", m.set_conditions)
+    ctx.register("set_match_settings", m.set_match_settings)
     ctx.register("after_set_conditions", m.after_set_conditions)
     ctx.register("get_ball_name", m.get_ball_name)
     ctx.register("get_stadium_name", m.get_stadium_name)
