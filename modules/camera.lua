@@ -9,7 +9,7 @@ Requires: sider.dll 6.0.1+
 --]]
 
 local m = {}
-m.version = "3.0"
+m.version = "3.1"
 local hex = memory.hex
 local settings
 
@@ -24,6 +24,7 @@ local frame_count = 0
 
 local overlay_curr = 1
 local overlay_states = {
+    { ui = "dynamic wide camera angle: %0.2f", prop = "dynwide_camera_angle", decr = -0.1, incr = 0.1 },
     { ui = "fanview camera zoom: %0.2f", prop = "fanview_camera_zoom", decr = -0.1, incr = 0.1 },
     { ui = "fanview camera height: %0.2f", prop = "fanview_camera_height", decr = -0.01, incr = 0.01 },
     { ui = "fanview camera angle: %0.2f", prop = "fanview_camera_angle", decr = -0.1, incr = 0.1 },
@@ -39,10 +40,12 @@ local overlay_states = {
 local ui_lines = {}
 
 local bases = {
+    dynwide_angle = nil,
     camera = nil,
     replays = nil,
 }
 local game_info = {
+    dynwide_camera_angle  = { base = "dynwide_angle", offs = 0, format = "f", len = 4, def = 0.2 },
     fanview_camera_zoom   = { base = "camera", offs = 0x08, format = "f", len = 4, def = 25.60 },
     fanview_camera_height = { base = "camera", offs = 0x0c, format = "f", len = 4, def = 0.43 },
     fanview_camera_angle  = { base = "camera", offs = 0x24, format = "f", len = 4, def = 1 },
@@ -79,6 +82,7 @@ local function save_ini(ctx, filename)
         return
     end
     f:write(string.format("# Camera settings. Written by camera.lua " .. m.version .. "\n\n"))
+    f:write(string.format("dynwide_camera_angle = %0.2f\n", settings.dynwide_camera_angle or game_info.dynwide_camera_angle.def))
     f:write(string.format("fanview_camera_zoom = %0.2f\n", settings.fanview_camera_zoom or game_info.fanview_camera_zoom.def))
     f:write(string.format("fanview_camera_height = %0.2f\n", settings.fanview_camera_height or game_info.fanview_camera_height.def))
     f:write(string.format("fanview_camera_angle = %0.2f\n", settings.fanview_camera_angle or game_info.fanview_camera_angle.def))
@@ -238,7 +242,7 @@ local function find_pattern(ctx, pattern, cache_id)
         if f then
             local cache_data = f:read("*all")
             local hint = string.sub(cache_data, cache_id*8+1, cache_id*8+8)
-            if hint then
+            if hint and hint ~= "" then
                 local addr = memory.unpack("i64", hint)
                 if addr and addr ~= 0 then
                     local data = memory.read(addr, #pattern)
@@ -295,8 +299,33 @@ function m.init(ctx)
         error("problem: unable to find code pattern for replays switch")
     end
 
+    -- find angle reading instruction for Dynamic Wide camera.
+    -- this code pattern immediately follows the instruction we need:
+    --[[
+000000014AD14892 | F3 41 0F 59 FA                     | mulss xmm7,xmm10                       |
+000000014AD14897 | F3 45 0F 5E C2                     | divss xmm8,xmm10                       |
+000000014AD1489C | F3 41 0F 5E F2                     | divss xmm6,xmm10                       |
+000000014AD148A1 | F3 41 0F 5C C0                     | subss xmm0,xmm8                        |
+    --]]
+    local loc = find_pattern(ctx, "\xf3\x41\x0f\x59\xfa\xf3\x45\x0f\x5e\xc2\xf3\x41\x0f\x5e\xf2\xf3\x41\x0f\x5c\xc0", 2)
+    if loc then
+        cache[2] = loc
+        local rel_offset = memory.unpack("i32", memory.read(loc - 4, 4))
+        log(string.format("Dynamic Wide angle read at: %s", hex(loc - 9)))
+        log(string.format("Dynamic Wide org angle address: %s", hex(loc + rel_offset)))
+        -- codecave concept: modify instruction, change relative offset.
+        -- We need to make the game to read a value from a different location,
+        -- so that we can safely modify the value.
+        rel_offset = rel_offset + 0x2c -- there's an unused memory slot there
+        memory.write(loc - 4, memory.pack("i32", rel_offset))
+        bases.dynwide_angle = loc + rel_offset
+        log(string.format("Dynamic Wide new angle address: %s", hex(bases.dynwide_angle)))
+    else
+        error("problem: unable to find code pattern for dynamic wide camera angle read")
+    end
+
     -- save found locations to disk
-    write_cache(ctx, cache, 2)
+    write_cache(ctx, cache, 3)
 
     -- register for events
     ctx.register("set_teams", m.set_teams)
