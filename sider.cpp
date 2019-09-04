@@ -1370,20 +1370,32 @@ class cache_t {
     CRITICAL_SECTION *_kcs;
     int debug;
     uint64_t _total_lookup_ticks;
+    uint64_t _total_lookups;
     uint64_t _total_put_ticks;
+    uint64_t _total_puts;
 public:
     cache_t(CRITICAL_SECTION *cs, int ttl_sec) :
         _total_lookup_ticks(0), _total_put_ticks(0),
+        _total_lookups(0), _total_puts(0),
         _kcs(cs), _ttl_msec(ttl_sec * 1000) {
     }
     ~cache_t() {
         log_(L"cache: total_lookup_ticks:%d\n", _total_lookup_ticks);
         log_(L"cache: total_put_ticks:%d\n", _total_put_ticks);
+        log_(L"cache: total_lookups:%d\n", _total_lookups);
+        log_(L"cache: total_puts:%d\n", _total_puts);
+        if (_total_lookups) {
+            log_(L"cache: avg lookup: %0.3f\n", (double)_total_lookup_ticks / _total_lookups);
+        }
+        if (_total_puts) {
+            log_(L"cache: avg put: %0.3f\n", (double)_total_put_ticks / _total_puts);
+        }
         log_(L"cache: size:%d\n", _map.size());
     }
     bool lookup(char *filename, void **res) {
         lock_t lock(_kcs);
-        uint64_t s = GetTickCount64();
+        uint64_t s, e;
+        QueryPerformanceCounter((LARGE_INTEGER*)&s);
         cache_map_t::iterator i = _map.find(filename);
         if (i != _map.end()) {
             uint64_t ltime = GetTickCount64();
@@ -1392,7 +1404,9 @@ public:
                 // hit
                 *res = i->second.value;
                 //logu_("lookup FOUND: (%08x) %s\n", i->first, filename);
-                _total_lookup_ticks += GetTickCount64() - s;
+                QueryPerformanceCounter((LARGE_INTEGER*)&e);
+                _total_lookup_ticks += e - s;
+                _total_lookups++;
                 return true;
             }
             else {
@@ -1405,11 +1419,14 @@ public:
             // miss
         }
         *res = NULL;
-        _total_lookup_ticks += GetTickCount64() - s;
+        QueryPerformanceCounter((LARGE_INTEGER*)&e);
+        _total_lookup_ticks += e - s;
+        _total_lookups++;
         return false;
     }
     void put(char *filename, void *value) {
-        uint64_t s = GetTickCount64();
+        uint64_t s, e;
+        QueryPerformanceCounter((LARGE_INTEGER*)&s);
         uint64_t ltime = GetTickCount64();
         cache_map_value_t v;
         v.value = value;
@@ -1426,7 +1443,9 @@ public:
                 res.first->second.expires = v.expires;
             }
         }
-        _total_put_ticks += GetTickCount64() - s;
+        QueryPerformanceCounter((LARGE_INTEGER*)&e);
+        _total_put_ticks += e - s;
+        _total_puts++;
     }
 };
 
