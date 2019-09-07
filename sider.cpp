@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
-#include <list>
+#include <vector>
 #include <string>
 #include <map>
 #include <unordered_map>
@@ -330,7 +330,7 @@ HANDLE _controller_poll_handle(INVALID_HANDLE_VALUE);
 DIDATAFORMAT _data_format;
 BYTE _prev_controller_buttons[64];
 BYTE _controller_buttons[64];
-list<DIDEVICEOBJECTINSTANCE> _di_objects;
+vector<DIDEVICEOBJECTINSTANCE> _di_objects;
 
 struct di_input_t {
     DWORD dwOfs;
@@ -963,15 +963,15 @@ public:
     bool _jit_enabled;
     bool _luajit_extensions_enabled;
     bool _dummify_uniparam;
-    list<wstring> _lua_extra_globals;
+    vector<wstring> _lua_extra_globals;
     int _lua_gc_opt;
     int _dll_mapping_option;
     int _key_cache_ttl_sec;
     int _rewrite_cache_ttl_sec;
     wstring _section_name;
-    list<wstring> _cpk_roots;
-    list<wstring> _exe_names;
-    list<wstring> _module_names;
+    vector<wstring> _cpk_roots;
+    vector<wstring> _exe_names;
+    vector<wstring> _module_names;
     bool _close_sider_on_exit;
     bool _start_minimized;
     bool _free_side_select;
@@ -1362,6 +1362,57 @@ GetTickCount64:
 00007FF818F261CD | C3                                   | ret                              |
 */
 
+class stats_t {
+public:
+    uint64_t _total_count;
+    uint64_t _total;
+    uint64_t _min;
+    uint64_t _max;
+    wstring _name;
+
+    stats_t(const wchar_t *name) : _name(name), _total_count(0), _total(0), _min((uint64_t)-1), _max(0) {}
+    ~stats_t() {
+        log_(L"stats (%s): total_count:%d\n", _name.c_str(), _total_count);
+        log_(L"stats (%s): total:%d\n", _name.c_str(), _total);
+        log_(L"stats (%s): min:%d\n", _name.c_str(), _min);
+        log_(L"stats (%s): max:%d\n", _name.c_str(), _max);
+        if (_total_count > 0) {
+            double avg = (double)_total / _total_count;
+            log_(L"stats (%s): avg:%0.3f\n", _name.c_str(), avg);
+        }
+    }
+};
+
+class perf_timer_t {
+public:
+    stats_t *_stats;
+    uint64_t _s, _e;
+    perf_timer_t(stats_t *stats) : _stats(stats) {
+        QueryPerformanceCounter((LARGE_INTEGER*)&_s);
+    }
+    ~perf_timer_t() {
+        QueryPerformanceCounter((LARGE_INTEGER*)&_e);
+        uint64_t elapsed = _e - _s;
+        _stats->_total_count++;
+        _stats->_total += elapsed;
+        if (_stats->_min > elapsed) {
+            _stats->_min = elapsed;
+        }
+        if (_stats->_max < elapsed) {
+            _stats->_max = elapsed;
+        }
+    }
+};
+
+stats_t *_stats(NULL);
+stats_t *_content_stats(NULL);
+
+#ifdef PERF_TESTING
+#define PERF_TIMER perf_timer_t timer
+#else
+#define PERF_TIMER
+#endif
+
 typedef unordered_map<string,cache_map_value_t> cache_map_t;
 
 class cache_t {
@@ -1369,15 +1420,25 @@ class cache_t {
     uint64_t _ttl_msec;
     CRITICAL_SECTION *_kcs;
     int debug;
+    stats_t *_lookup_stats;
+    stats_t *_put_stats;
 public:
     cache_t(CRITICAL_SECTION *cs, int ttl_sec) :
+        _lookup_stats(NULL), _put_stats(NULL),
         _kcs(cs), _ttl_msec(ttl_sec * 1000) {
+#ifdef PERF_TESTING
+        _lookup_stats = new stats_t(L"lookups");
+        _put_stats = new stats_t(L"puts");
+#endif
     }
     ~cache_t() {
         log_(L"cache: size:%d\n", _map.size());
+        if (_lookup_stats) { delete _lookup_stats; }
+        if (_put_stats) { delete _put_stats; }
     }
     bool lookup(char *filename, void **res) {
         lock_t lock(_kcs);
+        PERF_TIMER(_lookup_stats);
         cache_map_t::iterator i = _map.find(filename);
         if (i != _map.end()) {
             uint64_t ltime = GetTickCount64();
@@ -1401,6 +1462,7 @@ public:
         return false;
     }
     void put(char *filename, void *value) {
+        PERF_TIMER(_put_stats);
         uint64_t ltime = GetTickCount64();
         cache_map_value_t v;
         v.value = value;
@@ -1694,9 +1756,9 @@ struct module_t {
     int evt_key_up;
     int evt_gamepad_input;
 };
-list<module_t*> _modules;
+vector<module_t*> _modules;
 module_t* _curr_m;
-list<module_t*>::iterator _curr_overlay_m;
+vector<module_t*>::iterator _curr_overlay_m;
 
 bool init_paths() {
     wchar_t *p;
@@ -1781,7 +1843,7 @@ static bool write_mapping_info(config_t *config)
 {
     // determine the size needed
     DWORD size = sizeof(wchar_t);
-    list<wstring>::iterator it;
+    vector<wstring>::iterator it;
     for (it = _config->_exe_names.begin();
             it != _config->_exe_names.end();
             it++) {
@@ -1904,7 +1966,7 @@ wstring* _have_live_file(char *file_name)
     //Utf8::fUtf8ToUnicode(unicode_filename, file_name);
 
     wchar_t fn[512];
-    for (list<wstring>::iterator it = _config->_cpk_roots.begin();
+    for (vector<wstring>::iterator it = _config->_cpk_roots.begin();
             it != _config->_cpk_roots.end();
             it++) {
         fn[0] = L'\0';
@@ -1935,6 +1997,7 @@ wstring* _have_live_file(char *file_name)
 
 wstring* have_live_file(char *file_name)
 {
+    PERF_TIMER(_stats);
     //logu_("have_live_file: %p --> %s\n", (DWORD)file_name, file_name);
     if (!_config->_lookup_cache_enabled) {
         // no cache
@@ -2795,7 +2858,7 @@ bool do_rewrite(char *file_name)
         }
     }
 
-    list<module_t*>::iterator i;
+    vector<module_t*>::iterator i;
     for (i = _modules.begin(); i != _modules.end(); i++) {
         module_t *m = *i;
         if (m->evt_lcpk_rewrite != 0) {
@@ -2814,6 +2877,7 @@ bool do_rewrite(char *file_name)
 
 wstring* have_content(char *file_name)
 {
+    PERF_TIMER(_content_stats);
     char key[512];
     wstring *res = NULL;
 
@@ -2823,7 +2887,7 @@ wstring* have_content(char *file_name)
             return res;
         }
     }
-    list<module_t*>::iterator i;
+    vector<module_t*>::iterator i;
     //logu_("have_content: %p --> %s\n", (DWORD)file_name, file_name);
     for (i = _modules.begin(); i != _modules.end(); i++) {
         module_t *m = *i;
@@ -3543,7 +3607,7 @@ DWORD direct_input_poll(void *param) {
                     DBG(64) {
                         if (memcmp(_prev_controller_buttons, _controller_buttons, sizeof(_controller_buttons))!=0) {
                             logu_("was: ");
-                            list<DIDEVICEOBJECTINSTANCE>::iterator it;
+                            vector<DIDEVICEOBJECTINSTANCE>::iterator it;
                             for (it = _di_objects.begin(); it != _di_objects.end(); it++) {
                                 if (it->dwType & DIDFT_AXIS) {
                                     log_(L"|%s (0x%x): %d\n", it->tszName, it->dwType, *(DWORD*)(_prev_controller_buttons + it->dwOfs));
@@ -3600,7 +3664,7 @@ DWORD direct_input_poll(void *param) {
                     // check states
                     if (_overlay_on && !handled && _curr_overlay_m != _modules.end()) {
                         _xi_changes_len = 0;
-                        list<DIDEVICEOBJECTINSTANCE>::iterator it;
+                        vector<DIDEVICEOBJECTINSTANCE>::iterator it;
                         for (it = _di_objects.begin(); it != _di_objects.end(); it++) {
                             int what;
                             if (!_gamepad_config->lookup_di(it->dwType, &what)) {
@@ -4100,7 +4164,7 @@ BOOL sider_read_file(
     if (rs && !IsBadReadPtr(rs, sizeof(struct READ_STRUCT))) {
         // livecpk_read
         if (num_bytes_read > 0 && _config->_lua_enabled) {
-            list<module_t*>::iterator i;
+            vector<module_t*>::iterator i;
             for (i = _modules.begin(); i != _modules.end(); i++) {
                 module_t *m = *i;
                 if (m->evt_lcpk_read != 0) {
@@ -4206,7 +4270,7 @@ void sider_mem_copy(BYTE *dst, LONGLONG dst_len, BYTE *src, LONGLONG src_len, BY
 
         // livecpk_read
         if (_config->_lua_enabled) {
-            list<module_t*>::iterator i;
+            vector<module_t*>::iterator i;
             for (i = _modules.begin(); i != _modules.end(); i++) {
                 module_t *m = *i;
                 if (m->evt_lcpk_read != 0) {
@@ -4315,7 +4379,7 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
             set_context_field_int("away_team", away);
 
             // lua call-backs
-            list<module_t*>::iterator i;
+            vector<module_t*>::iterator i;
             for (i = _modules.begin(); i != _modules.end(); i++) {
                 module_t *m = *i;
                 module_set_teams(m, home, away); //, _home_team_info, _away_team_info);
@@ -4342,7 +4406,7 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
         //set_match_info(mi);
 
         // lua callbacks
-        list<module_t*>::iterator i;
+        vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
             DWORD num_minutes = mi->match_time;
@@ -4404,7 +4468,7 @@ WORD sider_trophy_check(WORD trophy_id)
     DBG(16) logu_("trophy check:: trophy-id: 0x%0x\n", tid);
     if (_config->_lua_enabled) {
         // lua callbacks
-        list<module_t*>::iterator i;
+        vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
             WORD new_tid = tid;
@@ -4458,7 +4522,7 @@ char* sider_ball_name(char *ball_name)
 {
     if (_config->_lua_enabled) {
         // lua callbacks
-        list<module_t*>::iterator i;
+        vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
             char *new_ball_name = module_ball_name(m, ball_name);
@@ -4474,7 +4538,7 @@ char* sider_stadium_name(STAD_INFO_STRUCT *stad_info)
 {
     if (_config->_lua_enabled) {
         // lua callbacks
-        list<module_t*>::iterator i;
+        vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
             char *new_stadium_name = module_stadium_name(m, stad_info->name, stad_info->id);
@@ -4503,7 +4567,7 @@ void sider_set_stadium_choice(MATCH_INFO_STRUCT *mi, WORD stadium_choice)
     if (_stadium_choice_count % 2 == 1) {
         if (_config->_lua_enabled) {
             // lua callbacks
-            list<module_t*>::iterator i;
+            vector<module_t*>::iterator i;
             for (i = _modules.begin(); i != _modules.end(); i++) {
                 module_t *m = *i;
                 WORD new_stadium_choice;
@@ -4537,7 +4601,7 @@ DWORD sider_data_ready(FILE_LOAD_INFO *fli)
     if (fli->type == 7) { // completely read and CRI-unpacked
         // livecpk_data_ready
         if (_config->_lua_enabled) {
-            list<module_t*>::iterator i;
+            vector<module_t*>::iterator i;
             for (i = _modules.begin(); i != _modules.end(); i++) {
                 module_t *m = *i;
                 if (m->evt_lcpk_data_ready != 0) {
@@ -4579,7 +4643,7 @@ void sider_set_team_for_kits(KIT_STATUS_INFO *ksi, DWORD team_id_encoded, LONGLO
             }
             if (_config->_lua_enabled) {
                 // lua call-backs
-                list<module_t*>::iterator i;
+                vector<module_t*>::iterator i;
                 for (i = _modules.begin(); i != _modules.end(); i++) {
                     module_t *m = *i;
                     module_set_home_team_for_kits(m, decode_team_id(team_id_encoded), ksi->is_edit_mode);
@@ -4591,7 +4655,7 @@ void sider_set_team_for_kits(KIT_STATUS_INFO *ksi, DWORD team_id_encoded, LONGLO
 
             if (_config->_lua_enabled) {
                 // lua call-backs
-                list<module_t*>::iterator i;
+                vector<module_t*>::iterator i;
                 for (i = _modules.begin(); i != _modules.end(); i++) {
                     module_t *m = *i;
                     module_set_away_team_for_kits(m, decode_team_id(team_id_encoded), ksi->is_edit_mode);
@@ -4640,7 +4704,7 @@ void sider_check_kit_choice(MATCH_INFO_STRUCT *mi, DWORD home_or_away)
 
     if (_config->_lua_enabled) {
         // lua call-backs
-        list<module_t*>::iterator i;
+        vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
             if (module_set_kits(m, mi)) {
@@ -5473,7 +5537,7 @@ static void push_env_table(lua_State *L, const wchar_t *script_name)
     }
     /* DISABLING FOR NOW, as this is a SECURITY issue
     // extra globals
-    for (list<wstring>::iterator i = _config->_lua_extra_globals.begin();
+    for (vector<wstring>::iterator i = _config->_lua_extra_globals.begin();
             i != _config->_lua_extra_globals.end();
             i++) {
         char *name = (char*)Utf8::unicodeToUtf8(i->c_str());
@@ -5614,7 +5678,7 @@ void init_lua_support()
         //luaopen_jit(L);
 
         // load registered modules
-        for (list<wstring>::iterator it = _config->_module_names.begin();
+        for (vector<wstring>::iterator it = _config->_module_names.begin();
                 it != _config->_module_names.end();
                 it++) {
             log_(L"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
@@ -5731,12 +5795,12 @@ void init_lua_support()
                 logu_("OK: Lua module initialized: %s (stack position: %d)\n", mfile.c_str(), m->stack_position);
                 //logu_("gettop: %d\n", lua_gettop(L));
 
-                // add to list of loaded modules
+                // add to vector of loaded modules
                 _modules.push_back(m);
             }
         }
         _curr_overlay_m = _modules.end();
-        list<module_t*>::iterator j;
+        vector<module_t*>::iterator j;
         for (j = _modules.begin(); j != _modules.end(); j++) {
             module_t *m = *j;
             if (m->evt_overlay_on) {
@@ -5754,7 +5818,7 @@ void init_lua_support()
 void lua_reload_modified_modules()
 {
     lock_t lock(&_cs);
-    list<module_t*>::iterator j;
+    vector<module_t*>::iterator j;
     int count = 0;
     log_(L"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
     log_(L"Reloading modified modules ...\n");
@@ -5900,7 +5964,7 @@ void lua_reload_modified_modules()
                     // this module no longer supports evt_overlay_on
                     // need to switch to another
                     bool switched(false);
-                    list<module_t*>::iterator k = _curr_overlay_m;
+                    vector<module_t*>::iterator k = _curr_overlay_m;
                     k++;
                     for (; k != _modules.end(); k++) {
                         module_t *newm = *k;
@@ -5912,7 +5976,7 @@ void lua_reload_modified_modules()
                     }
                     // go again from the start, if not switched yet
                     if (!switched) {
-                        list<module_t*>::iterator k;
+                        vector<module_t*>::iterator k;
                         for (k = _modules.begin(); k != _modules.end(); k++) {
                             module_t *newm = *k;
                             if (newm->evt_overlay_on) {
@@ -5951,6 +6015,10 @@ DWORD install_func(LPVOID thread_param) {
     InitializeCriticalSection(&_cs);
     _key_cache = new cache_t(&_cs, _config->_key_cache_ttl_sec);
     _rewrite_cache = new cache_t(&_cs, _config->_rewrite_cache_ttl_sec);
+#ifdef PERF_TESTING
+    _stats = new stats_t(L"have_live");
+    _content_stats = new stats_t(L"have_content");
+#endif
 
     InitializeCriticalSection(&_tcs);
     _trophy_map = new trophy_map_t();
@@ -6023,7 +6091,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"hook.trophy-check = %d\n", _config->_hook_trophy_check);
     log_(L"--------------------------\n");
 
-    for (list<wstring>::iterator it = _config->_cpk_roots.begin();
+    for (vector<wstring>::iterator it = _config->_cpk_roots.begin();
             it != _config->_cpk_roots.end();
             it++) {
         log_(L"Using cpk.root: %s\n", it->c_str());
@@ -6529,7 +6597,7 @@ void init_direct_input()
                         size_t rgodf_size = sizeof(DIOBJECTDATAFORMAT) * _di_objects.size();
                         _data_format.rgodf = (LPDIOBJECTDATAFORMAT)malloc(rgodf_size);
                         int i = 0;
-                        list<DIDEVICEOBJECTINSTANCE>::iterator it;
+                        vector<DIDEVICEOBJECTINSTANCE>::iterator it;
                         for (it = _di_objects.begin(); it != _di_objects.end(); it++, i++) {
                             _data_format.rgodf[i].pguid = &it->guidType;
                             _data_format.rgodf[i].dwOfs = it->dwOfs;
@@ -6688,6 +6756,8 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
 
                 if (_key_cache) { delete _key_cache; }
                 if (_rewrite_cache) { delete _rewrite_cache; }
+                if (_stats) { delete _stats; }
+                if (_content_stats) { delete _content_stats; }
 
                 // tell sider.exe to close
                 if (_config->_close_sider_on_exit) {

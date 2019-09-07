@@ -11,6 +11,10 @@ EXTRA_CFLAGS=/DDEBUG
 EXTRA_CFLAGS=/DMYDLL_RELEASE_BUILD
 !endif
 
+!if "$(perf)"=="1"
+EXTRA_CFLAGS=$(EXTRA_CFLAGS) /DPERF_TESTING
+!endif
+
 LPZLIB=soft\zlib123-dll\dll_x64
 ZLIBINC=/I soft\zlib123-dll\include
 
