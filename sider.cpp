@@ -1362,6 +1362,51 @@ GetTickCount64:
 00007FF818F261CD | C3                                   | ret                              |
 */
 
+class stats_t {
+public:
+    uint64_t _total_count;
+    uint64_t _total;
+    uint64_t _min;
+    uint64_t _max;
+    wstring _name;
+
+    stats_t(const wchar_t *name) : _name(name), _total_count(0), _total(0), _min((uint64_t)-1), _max(0) {}
+    ~stats_t() {
+        log_(L"stats (%s): total_count:%d\n", _name.c_str(), _total_count);
+        log_(L"stats (%s): total:%d\n", _name.c_str(), _total);
+        log_(L"stats (%s): min:%d\n", _name.c_str(), _min);
+       log_(L"stats (%s): max:%d\n", _name.c_str(), _max);
+        if (_total_count > 0) {
+            double avg = (double)_total / _total_count;
+            log_(L"stats (%s): avg:%0.3f\n", _name.c_str(), avg);
+        }
+    }
+};
+
+class perf_timer_t {
+public:
+    stats_t *_stats;
+    uint64_t _s, _e;
+    perf_timer_t(stats_t *stats) : _stats(stats) {
+        QueryPerformanceCounter((LARGE_INTEGER*)&_s);
+    }
+    ~perf_timer_t() {
+        QueryPerformanceCounter((LARGE_INTEGER*)&_e);
+        uint64_t elapsed = _e - _s;
+        _stats->_total_count++;
+        _stats->_total += elapsed;
+        if (_stats->_min > elapsed) {
+            _stats->_min = elapsed;
+        }
+        if (_stats->_max < elapsed) {
+            _stats->_max = elapsed;
+        }
+    }
+};
+
+stats_t *_stats(NULL);
+stats_t *_content_stats(NULL);
+
 typedef unordered_map<string,cache_map_value_t> cache_map_t;
 
 class cache_t {
@@ -1964,6 +2009,7 @@ wstring* _have_live_file(char *file_name)
 
 wstring* have_live_file(char *file_name)
 {
+    perf_timer_t timer(_stats);
     //logu_("have_live_file: %p --> %s\n", (DWORD)file_name, file_name);
     if (!_config->_lookup_cache_enabled) {
         // no cache
@@ -2843,6 +2889,7 @@ bool do_rewrite(char *file_name)
 
 wstring* have_content(char *file_name)
 {
+    perf_timer_t timer(_content_stats);
     char key[512];
     wstring *res = NULL;
 
@@ -5980,6 +6027,8 @@ DWORD install_func(LPVOID thread_param) {
     InitializeCriticalSection(&_cs);
     _key_cache = new cache_t(&_cs, _config->_key_cache_ttl_sec);
     _rewrite_cache = new cache_t(&_cs, _config->_rewrite_cache_ttl_sec);
+    _stats = new stats_t(L"have_live");
+    _content_stats = new stats_t(L"have_content");
 
     InitializeCriticalSection(&_tcs);
     _trophy_map = new trophy_map_t();
@@ -6717,6 +6766,8 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
 
                 if (_key_cache) { delete _key_cache; }
                 if (_rewrite_cache) { delete _rewrite_cache; }
+                if (_stats) { delete _stats; }
+                if (_content_stats) { delete _content_stats; }
 
                 // tell sider.exe to close
                 if (_config->_close_sider_on_exit) {
