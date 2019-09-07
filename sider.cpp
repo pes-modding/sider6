@@ -1375,7 +1375,7 @@ public:
         log_(L"stats (%s): total_count:%d\n", _name.c_str(), _total_count);
         log_(L"stats (%s): total:%d\n", _name.c_str(), _total);
         log_(L"stats (%s): min:%d\n", _name.c_str(), _min);
-       log_(L"stats (%s): max:%d\n", _name.c_str(), _max);
+        log_(L"stats (%s): max:%d\n", _name.c_str(), _max);
         if (_total_count > 0) {
             double avg = (double)_total / _total_count;
             log_(L"stats (%s): avg:%0.3f\n", _name.c_str(), avg);
@@ -1407,6 +1407,12 @@ public:
 stats_t *_stats(NULL);
 stats_t *_content_stats(NULL);
 
+#ifdef PERF_TESTING
+#define PERF_TIMER perf_timer_t timer
+#else
+#define PERF_TIMER
+#endif
+
 typedef unordered_map<string,cache_map_value_t> cache_map_t;
 
 class cache_t {
@@ -1414,33 +1420,25 @@ class cache_t {
     uint64_t _ttl_msec;
     CRITICAL_SECTION *_kcs;
     int debug;
-    uint64_t _total_lookup_ticks;
-    uint64_t _total_lookups;
-    uint64_t _total_put_ticks;
-    uint64_t _total_puts;
+    stats_t *_lookup_stats;
+    stats_t *_put_stats;
 public:
     cache_t(CRITICAL_SECTION *cs, int ttl_sec) :
-        _total_lookup_ticks(0), _total_put_ticks(0),
-        _total_lookups(0), _total_puts(0),
+        _lookup_stats(NULL), _put_stats(NULL),
         _kcs(cs), _ttl_msec(ttl_sec * 1000) {
+#ifdef PERF_TESTING
+        _lookup_stats = new stats_t(L"lookups");
+        _put_stats = new stats_t(L"puts");
+#endif
     }
     ~cache_t() {
-        log_(L"cache: total_lookup_ticks:%d\n", _total_lookup_ticks);
-        log_(L"cache: total_put_ticks:%d\n", _total_put_ticks);
-        log_(L"cache: total_lookups:%d\n", _total_lookups);
-        log_(L"cache: total_puts:%d\n", _total_puts);
-        if (_total_lookups) {
-            log_(L"cache: avg lookup: %0.3f\n", (double)_total_lookup_ticks / _total_lookups);
-        }
-        if (_total_puts) {
-            log_(L"cache: avg put: %0.3f\n", (double)_total_put_ticks / _total_puts);
-        }
         log_(L"cache: size:%d\n", _map.size());
+        if (_lookup_stats) { delete _lookup_stats; }
+        if (_put_stats) { delete _put_stats; }
     }
     bool lookup(char *filename, void **res) {
         lock_t lock(_kcs);
-        uint64_t s, e;
-        QueryPerformanceCounter((LARGE_INTEGER*)&s);
+        PERF_TIMER(_lookup_stats);
         cache_map_t::iterator i = _map.find(filename);
         if (i != _map.end()) {
             uint64_t ltime = GetTickCount64();
@@ -1449,9 +1447,6 @@ public:
                 // hit
                 *res = i->second.value;
                 //logu_("lookup FOUND: (%08x) %s\n", i->first, filename);
-                QueryPerformanceCounter((LARGE_INTEGER*)&e);
-                _total_lookup_ticks += e - s;
-                _total_lookups++;
                 return true;
             }
             else {
@@ -1464,14 +1459,10 @@ public:
             // miss
         }
         *res = NULL;
-        QueryPerformanceCounter((LARGE_INTEGER*)&e);
-        _total_lookup_ticks += e - s;
-        _total_lookups++;
         return false;
     }
     void put(char *filename, void *value) {
-        uint64_t s, e;
-        QueryPerformanceCounter((LARGE_INTEGER*)&s);
+        PERF_TIMER(_put_stats);
         uint64_t ltime = GetTickCount64();
         cache_map_value_t v;
         v.value = value;
@@ -1488,9 +1479,6 @@ public:
                 res.first->second.expires = v.expires;
             }
         }
-        QueryPerformanceCounter((LARGE_INTEGER*)&e);
-        _total_put_ticks += e - s;
-        _total_puts++;
     }
 };
 
@@ -2009,7 +1997,7 @@ wstring* _have_live_file(char *file_name)
 
 wstring* have_live_file(char *file_name)
 {
-    perf_timer_t timer(_stats);
+    PERF_TIMER(_stats);
     //logu_("have_live_file: %p --> %s\n", (DWORD)file_name, file_name);
     if (!_config->_lookup_cache_enabled) {
         // no cache
@@ -2889,7 +2877,7 @@ bool do_rewrite(char *file_name)
 
 wstring* have_content(char *file_name)
 {
-    perf_timer_t timer(_content_stats);
+    PERF_TIMER(_content_stats);
     char key[512];
     wstring *res = NULL;
 
@@ -6027,8 +6015,10 @@ DWORD install_func(LPVOID thread_param) {
     InitializeCriticalSection(&_cs);
     _key_cache = new cache_t(&_cs, _config->_key_cache_ttl_sec);
     _rewrite_cache = new cache_t(&_cs, _config->_rewrite_cache_ttl_sec);
+#ifdef PERF_TESTING
     _stats = new stats_t(L"have_live");
     _content_stats = new stats_t(L"have_content");
+#endif
 
     InitializeCriticalSection(&_tcs);
     _trophy_map = new trophy_map_t();
