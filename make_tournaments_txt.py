@@ -1,6 +1,8 @@
 import struct
 import sys
 
+sys.stdout.reconfigure(encoding="utf-8")
+
 print("""Tournament IDs - you can use them in your sider modules.
 This information has been extracted from the game files.
 Many thanks to digitalfoxx !!! - for showing which BINs to look into""")

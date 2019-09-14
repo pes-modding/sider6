@@ -68,7 +68,7 @@ Spanish Cup - 25
 Coupe de la Ligue BKT - 26
 Netherlands Cup - 27
 Portugal Cup - 28
-Campeonato Brasileiro Série A - 29
+Campeonato Brasileiro SÃ©rie A - 29
 Superliga Argentina - 30
 Brazilian Cup - 31
 International Cup - 34
@@ -167,7 +167,7 @@ World Selection Challenge - 108
 Jupiler Pro League - 115
 Russian Premier Liga - 116
 Raiffeisen Super League - 117
-Spor Toto Süper Lig - 118
+Spor Toto SÃ¼per Lig - 118
 Liga Aguila - 119
 CFA Super League - 120
 Belgian Cup - 122
@@ -201,7 +201,7 @@ Play-Off Finals - 159
 Liga Aguila I Playoffs - 160
 Liga Aguila II Playoffs - 161
 TOYOTA Thai League - 162
-Campeonato Brasileiro Série B - 163
+Campeonato Brasileiro SÃ©rie B - 163
 Thai Cup - 164
 Thai Super Cup - 165
 First Phase - 166
