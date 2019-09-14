@@ -2,6 +2,12 @@ Sider 6 Release History
 =======================
 
 
+September 13, 2019
+v6.1.0
+- updated to work with full game, demo is no longer supported
+  (last version to support the demo: 6.0.1)
+
+
 August 13, 2019
 v6.0.1
 - most of Lua scripting engine is supported (except for "kits"), including overlay

@@ -1,7 +1,7 @@
 Sider 6 for Pro Evolution Soccer 2020
 =====================================
 Copyright (C) 2018-2019 juce
-Version 6.0.1
+Version 6.1.0
 
 
 
@@ -51,6 +51,21 @@ You can have multiple "exe.name" lines in your sider.ini,
 which is useful, for example, if you have several exe
 files with slightly different names that you use for
 online/offline play.
+
+
+free.side.select = 1
+
+- enables free movement of controllers. Normally, it is
+only possible in Exhibition modes, but with this setting
+set to 1, you will be able to move the controllers in the
+competition modes too.
+
+The 1st controller can also be moved into the middle,
+disabling it effectively. Use this carefully in the
+matches: if you move 1st controller into the middle, make
+sure that you have at least one other controller on the left
+or on the right. Otherwise, you will lose the control of the
+match. (default is: 0 - free movement disabled)
 
 
 livecpk.enabled = 1
