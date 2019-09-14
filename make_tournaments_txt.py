@@ -12,15 +12,15 @@ for x in ["CompetitionRegulation.bin", "CompetitionRegulation4.bin"]:
 
 """ % x)
 
-    with open(x + ".unzlib","rb") as f:
+    with open(x,"rb") as f:
         d = f.read()
         l = len(d)
         off = 0
         while off < l:
-            t = d[off:off+0x30]
+            t = d[off:off+0x253]
             tid = struct.unpack("<H", t[2:4])[0]
-            name = t[0x10:].decode('utf-8').strip('\0')
+            name = t[0x1e0:].decode('utf-8').strip('\0')
             print("%s - %d" % (name, tid))
-            off = off + 0x30
+            off = off + 0x930
 
 print("")
