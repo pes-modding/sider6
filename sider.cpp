@@ -1408,9 +1408,9 @@ stats_t *_stats(NULL);
 stats_t *_content_stats(NULL);
 
 #ifdef PERF_TESTING
-#define PERF_TIMER perf_timer_t timer
+#define PERF_TIMER(stats) perf_timer_t timer(stats)
 #else
-#define PERF_TIMER
+#define PERF_TIMER(stats)
 #endif
 
 typedef unordered_map<string,cache_map_value_t> cache_map_t;
