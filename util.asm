@@ -203,8 +203,8 @@ sider_free_select_hk proc
         push    rax
         sub     rsp,20h
         movsd   xmm0,qword ptr [rax]
-        movsd   qword ptr [rbx+0a4h],xmm0
-        lea     rcx,[rbx+0a4h]
+        movsd   qword ptr [rbx+0a8h],xmm0
+        lea     rcx,[rbx+0a8h]
         call    sider_free_select
         add     rsp,20h
         pop     rax

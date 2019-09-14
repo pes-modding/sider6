@@ -213,7 +213,7 @@ static BYTE patch_set_minutes[6] =
 
 static BYTE pattern_sider[13] =
     "\xf2\x0f\x10\x00"
-    "\xf2\x0f\x11\x83\xa4\x00\x00\x00";
+    "\xf2\x0f\x11\x83\xa8\x00\x00\x00";
 static int offs_sider = 0;
 
 // tournament_id --> trophy_id table

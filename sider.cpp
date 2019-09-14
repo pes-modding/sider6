@@ -6154,7 +6154,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[9] = 0; //sizeof(pattern_set_min_time)-1;
     frag_len[10] = sizeof(pattern_set_max_time)-1;
     frag_len[11] = (_config->_num_minutes > 0) ? sizeof(pattern_set_minutes)-1 : 0;
-    frag_len[12] = 0; //_config->_free_side_select ? sizeof(pattern_sider)-1 : 0;  //disabled for now
+    frag_len[12] = _config->_free_side_select ? sizeof(pattern_sider)-1 : 0;
     frag_len[13] = _config->_lua_enabled ? sizeof(pattern_trophy_table)-1 : 0;
     frag_len[14] = _config->_lua_enabled ? sizeof(pattern_ball_name)-1 : 0;
     frag_len[15] = _config->_overlay_enabled ? sizeof(pattern_dxgi)-1 : 0;
