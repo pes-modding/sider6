@@ -5,7 +5,8 @@ Sider 6 Release History
 September 13, 2019
 v6.1.0
 - updated to work with full game, demo is no longer supported
-  (last version to support the demo: 6.0.1)
+  (last version compatible with the demo: 6.0.1)
+- free.side.select option support
 
 
 August 13, 2019
