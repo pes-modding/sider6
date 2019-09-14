@@ -31,16 +31,14 @@ static BYTE lcpk_pattern2_at_read_file[23] =
     "\xff\x15";
 static int lcpk_offs2_at_read_file = 20;
 
-static BYTE lcpk_pattern_at_get_size[25] =
-    "\xeb\x05"
-    "\xe8\xf7\xf1\xff\xff"
+static BYTE lcpk_pattern_at_get_size[18] =
     "\x85\xc0"
     "\x74\x24"
     "\x8b\x44\x24\x34"
     "\x89\x43\x04"
     "\x8b\x44\x24\x30"
     "\x89\x03";
-static int lcpk_offs_at_get_size = 24;
+static int lcpk_offs_at_get_size = 17;
 
 static BYTE lcpk_pattern_at_write_cpk_filesize[16] =
     "\x48\x8b\x44\x24\x48"
@@ -49,16 +47,27 @@ static BYTE lcpk_pattern_at_write_cpk_filesize[16] =
     "\x49\x89\x7d\x00";
 static int lcpk_offs_at_write_cpk_filesize = 0;
 
+/*
+000000014FA7839A | 4C 8B 01                           | mov r8,qword ptr ds:[rcx]              |
+000000014FA7839D | 49 89 D9                           | mov r9,rbx                             |
+000000014FA783A0 | 4D 01 D0                           | add r8,r10                             |
+000000014FA783A3 | 4C 89 D9                           | mov rcx,r11                            |
+*/
 static BYTE lcpk_pattern_at_mem_copy[13] =
     "\x4c\x8b\x01"
-    "\x4c\x8b\xcb"
-    "\x4d\x03\xc2"
-    "\x49\x8b\xcb";
+    "\x49\x89\xd9"
+    "\x4d\x01\xd0"
+    "\x4c\x89\xd9";
 static int lcpk_offs_at_mem_copy = 9;
 
+/*
+000000014FA5F32A | 48 8D 8F 08 01 00 00               | lea rcx,qword ptr ds:[rdi+108]         |
+000000014FA5F331 | 49 89 F0                           | mov r8,rsi                             |
+000000014FA5F334 | 48 8D 54 24 20                     | lea rdx,qword ptr ss:[rsp+20]          |
+*/
 static BYTE lcpk_pattern_at_lookup_file[16] =
     "\x48\x8d\x8f\x08\x01\x00\x00"
-    "\x4c\x8b\xc6"
+    "\x49\x89\xf0"
     "\x48\x8d\x54\x24\x20";
 static int lcpk_offs_at_lookup_file = 0;
 
@@ -265,32 +274,33 @@ static BYTE pattern_dxgi[20] =
 static int offs_dxgi = 0x1a;
 
 /*
-0000000140A9F54E | C6 45 BB 01                        | mov byte ptr ss:[rbp-45],1           |
-0000000140A9F552 | 0F B7 D3                           | movzx edx,bx                         |
-0000000140A9F555 | 48 8B CF                           | mov rcx,rdi                          |
-0000000140A9F558 | E8 23 BF 45 00                     | call pes2020.140EFB480               |
+0000000140ABC725 | C6 44 24 20 01                     | mov byte ptr ss:[rsp+20],1             |
+0000000140ABC72A | 0F B7 D3                           | movzx edx,bx                           |
+0000000140ABC72D | 48 8B CE                           | mov rcx,rsi                            |
+0000000140ABC730 | E8 2B 58 9C 00                     | call pes2020.141481F60                 |
 ...
-0000000140EFB480 | E9 BB B0 01 10                     | jmp pes2020.150F16540                | to set stadium choice (from dx)
-0000000140EFB485 | CC                                 | int3                                 |
-0000000140EFB486 | CC                                 | int3                                 |
-0000000140EFB487 | CC                                 | int3                                 |
-0000000140EFB488 | CC                                 | int3                                 |
-0000000140EFB489 | CC                                 | int3                                 |
-0000000140EFB48A | CC                                 | int3                                 |
-0000000140EFB48B | CC                                 | int3                                 |
-0000000140EFB48C | CC                                 | int3                                 |
-0000000140EFB48D | CC                                 | int3                                 |
-0000000140EFB48E | CC                                 | int3                                 |
+0000000141481F60 | E9 BB 19 C1 0D                     | jmp pes2020.14F093920                  |
+0000000141481F65 | CC                                 | int3                                   |
+0000000141481F66 | CC                                 | int3                                   |
+0000000141481F67 | CC                                 | int3                                   |
+0000000141481F68 | CC                                 | int3                                   |
+0000000141481F69 | CC                                 | int3                                   |
+0000000141481F6A | CC                                 | int3                                   |
+0000000141481F6B | CC                                 | int3                                   |
+0000000141481F6C | CC                                 | int3                                   |
+0000000141481F6D | CC                                 | int3                                   |
+0000000141481F6E | CC                                 | int3                                   |
+0000000141481F6F | CC                                 | int3                                   |
 ...
-0000000150F16540 | 66 89 51 34                        | mov word ptr ds:[rcx+34],dx          | set stadium choice
-0000000150F16544 | C3                                 | ret                                  |
+000000014F093920 | 66 89 51 34                        | mov word ptr ds:[rcx+34],dx            | set stadium choice
+000000014F093924 | C3                                 | ret                                    |
 */
-static BYTE pattern_set_stadium_choice[12] =
-    "\xc6\x45\xbb\x01"
+static BYTE pattern_set_stadium_choice[13] =
+    "\xc6\x44\x24\x20\x01"
     "\x0f\xb7\xd3"
-    "\x48\x8b\xcf"
+    "\x48\x8b\xce"
     "\xe8";
-static int offs_set_stadium_choice = 10;
+static int offs_set_stadium_choice = 11;
 
 /*
 000000014CFE6503 | 80 79 08 00             | cmp byte ptr ds:[rcx+8],0              | before stadium name copy
