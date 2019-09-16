@@ -149,9 +149,9 @@ ctx.stadium_choice - This field is set when the game is in one of the
                      "set_stadium" event fires), the "stadium_choice"
                      field get removed from the context.
                      Special values:
-                          253 - home stadium
-                          254 - random stadium
-                          255 - not chosen yet
+                          65533 - home stadium
+                          65534 - random stadium
+                          65355 - not chosen yet
 
 ctx.timeofday  - The values are: 0 - Day, 1 - Night. Same as with
                  stadium, it represents the time of day of the coming
