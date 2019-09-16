@@ -6170,7 +6170,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[25] = _config->_lua_enabled ? sizeof(pattern_set_team_for_kits)-1 : 0;
     frag_len[26] = _config->_lua_enabled ? sizeof(pattern_clear_team_for_kits)-1 : 0;
     frag_len[27] = _config->_lua_enabled ? sizeof(pattern_uniparam_loaded)-1 : 0;
-    frag_len[28] = _config->_lua_enabled ? sizeof(pattern_call_to_move)-1 : 0;
+    frag_len[28] = 0; //_config->_lua_enabled ? sizeof(pattern_call_to_move)-1 : 0;
 
     int offs[NUM_PATTERNS];
     offs[0] = lcpk_offs_at_read_file;
@@ -6342,7 +6342,7 @@ bool all_found(config_t *cfg) {
             //cfg->_hp_at_check_kit_choice > 0 &&
             //cfg->_hp_at_get_uniparam > 0 &&
             cfg->_hp_at_data_ready > 0 &&
-            cfg->_hp_at_call_to_move > 0 &&
+            //cfg->_hp_at_call_to_move > 0 &&
             //cfg->_hp_at_kit_status > 0 &&
             //cfg->_hp_at_set_team_for_kits > 0 &&
             //cfg->_hp_at_clear_team_for_kits > 0 &&
@@ -6455,7 +6455,7 @@ bool hook_if_all_found() {
             log_(L"sider_check_kit_choice: %p\n", sider_check_kit_choice_hk);
             */
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
-            log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
+            //log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
 
             if (_config->_hook_set_team_id) {
                 BYTE *check_addr = _config->_hp_at_set_team_id - offs_set_team_id + offs_check_set_team_id;
@@ -6504,9 +6504,9 @@ bool hook_if_all_found() {
             //    (BYTE*)pattern_set_stadium_choice_tail, sizeof(pattern_set_stadium_choice_tail)-1);
 
             // move next function (right after data_ready)
-            move_code(_config->_hp_at_data_ready + 11, 1, 7);
-            DWORD rel_offs = *(DWORD*)(_config->_hp_at_call_to_move + 1) + 1;
-            patch_at_location(_config->_hp_at_call_to_move + 1, (BYTE*)&rel_offs, sizeof(DWORD));
+            //move_code(_config->_hp_at_data_ready + 11, 1, 7);
+            //DWORD rel_offs = *(DWORD*)(_config->_hp_at_call_to_move + 1) + 1;
+            //patch_at_location(_config->_hp_at_call_to_move + 1, (BYTE*)&rel_offs, sizeof(DWORD));
 
             hook_jmp(_config->_hp_at_data_ready, (BYTE*)sider_data_ready_hk, 0);
 
