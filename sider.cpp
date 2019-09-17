@@ -200,7 +200,7 @@ struct TROPHY_TABLE_ENTRY {
     DWORD trophy_id;
 };
 
-#define TT_LEN 0x14b
+#define TT_LEN 0x148
 TROPHY_TABLE_ENTRY _trophy_table[TT_LEN];
 typedef unordered_map<WORD,DWORD> trophy_map_t;
 trophy_map_t *_trophy_map;
@@ -4509,10 +4509,10 @@ void sider_free_select(BYTE *controller_restriction)
 void sider_trophy_table(TROPHY_TABLE_ENTRY *tt)
 {
     //logu_("trophy table addr: %p\n", tt);
-    //logu_("tid: %d (0x%x) --> 0x%x\n", tt->tournament_id, tt->trophy_id);
     EnterCriticalSection(&_tcs);
     for (int i=0; i<TT_LEN; i++) {
         (*_trophy_map)[tt->tournament_id] = tt->trophy_id;
+        //logu_("tid: %d (0x%x) --> 0x%x\n", tt->tournament_id, tt->tournament_id, tt->trophy_id);
         tt++;
     }
     LeaveCriticalSection(&_tcs);
@@ -4563,8 +4563,9 @@ void sider_set_stadium_choice(MATCH_INFO_STRUCT *mi, WORD stadium_choice)
 {
     _stadium_choice_count++;
     DBG(16) logu_("set_stadium_choice: mi->stadium_choice=%d, stadium_choice=%d\n", mi->stadium_choice, stadium_choice);
+    bool just_updated = (mi->stadium_choice != stadium_choice);
     mi->stadium_choice = stadium_choice;
-    if (_stadium_choice_count % 2 == 1) {
+    if (!just_updated) {//_stadium_choice_count % 2 == 1) {
         if (_config->_lua_enabled) {
             // lua callbacks
             vector<module_t*>::iterator i;
@@ -6332,8 +6333,8 @@ bool all_found(config_t *cfg) {
         all = all && (
             cfg->_hp_at_set_team_id > 0 &&
             cfg->_hp_at_set_settings > 0 &&
-            //cfg->_hp_at_trophy_check > 0 &&
-            //cfg->_hp_at_trophy_table > 0 &&
+            cfg->_hp_at_trophy_check > 0 &&
+            cfg->_hp_at_trophy_table > 0 &&
             cfg->_hp_at_ball_name > 0 &&
             cfg->_hp_at_stadium_name > 0 &&
             cfg->_hp_at_def_stadium_name > 0 &&
@@ -6442,10 +6443,8 @@ bool hook_if_all_found() {
             log_(L"-------------------------------\n");
             log_(L"sider_set_team_id: %p\n", sider_set_team_id_hk);
             log_(L"sider_set_settings: %p\n", sider_set_settings_hk);
-            /*
             log_(L"sider_trophy_check: %p\n", sider_trophy_check_hk);
             log_(L"sider_trophy_table: %p\n", sider_trophy_table_hk);
-            */
             log_(L"sider_context_reset: %p\n", sider_context_reset_hk);
             log_(L"sider_ball_name: %p\n", sider_ball_name_hk);
             log_(L"sider_stadium_name: %p\n", sider_stadium_name_hk);
@@ -6479,12 +6478,11 @@ bool hook_if_all_found() {
                 hook_call_with_head_and_tail(_config->_hp_at_set_settings, (BYTE*)sider_set_settings_hk,
                     (BYTE*)pattern_set_settings_head, sizeof(pattern_set_settings_head)-1,
                     (BYTE*)pattern_set_settings_tail, sizeof(pattern_set_settings_tail)-1);
-            /*
+
             if (_config->_hook_trophy_check)
                 hook_call_rcx(_config->_hp_at_trophy_check, (BYTE*)sider_trophy_check_hk, 0);
             if (_config->_hook_trophy_table)
                 hook_call_rcx(_config->_hp_at_trophy_table, (BYTE*)sider_trophy_table_hk, 0);
-            */
             if (_config->_hook_context_reset)
                 hook_call(_config->_hp_at_context_reset, (BYTE*)sider_context_reset_hk, 6);
 

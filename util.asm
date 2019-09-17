@@ -160,15 +160,20 @@ sider_set_settings_hk proc
 
 sider_set_settings_hk endp
 
+;0000000141EE81DE | 4C 8D AE 00 C4 00 00               | lea r13,qword ptr ds:[rsi+C400]        |
+;0000000141EE81E5 | 8B 8E 98 04 00 00                  | mov ecx,dword ptr ds:[rsi+498]         | c2
+;0000000141EE81EB | 41 80 E6 01                        | and r14b,1                             |
+;0000000141EE81EF | D1 FD                              | sar ebp,1                              |
+
 sider_trophy_check_hk proc
 
         push    rax
         sub     rsp,20h
-        mov     ecx,dword ptr [rbp+488h]
+        mov     ecx,dword ptr [rsi+498h]
         call    sider_trophy_check
         mov     ecx,eax
         and     r14b,1
-        sar     esi,1
+        sar     ebp,1
         add     rsp,20h
         pop     rax
         ret

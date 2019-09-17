@@ -146,20 +146,27 @@ static BYTE pattern_set_settings_tail[2] =
 000000015110A82E | 8B 8D 88 04 00 00                     | mov ecx,dword ptr ss:[rbp+488]  | t-check (4)
 000000015110A834 | 41 80 E6 01                           | and r14b,1                      |
 000000015110A838 | D1 FE                                 | sar esi,1                       |
+
+0000000141EE81DE | 4C 8D AE 00 C4 00 00               | lea r13,qword ptr ds:[rsi+C400]        |
+0000000141EE81E5 | 8B 8E 98 04 00 00                  | mov ecx,dword ptr ds:[rsi+498]         | c2
+0000000141EE81EB | 41 80 E6 01                        | and r14b,1                             |
+0000000141EE81EF | D1 FD                              | sar ebp,1                              |
 */
 static BYTE pattern_trophy_check[20] =
-    "\x4c\x8d\xa5\xf0\xc3\x00\x00"
-    "\x8b\x8d\x88\x04\x00\x00"
+    "\x4c\x8d\xae\x00\xc4\x00\x00"
+    "\x8b\x8e\x98\x04\x00\x00"
     "\x41\x80\xe6\x01"
-    "\xd1\xfe";
+    "\xd1\xfd";
 static int offs_trophy_check = 7;
 
+/**
 static BYTE pattern_trophy_check_head[5] =
     "\x48\x83\xec\x28";
 
 static BYTE pattern_trophy_check_tail[10] =
     "\x48\x85\xd2"
     "\x0f\x84\x8d\x00\x00\x00";
+**/
 
 /*
 0000000140A8FA94 | 48 89 8B 84 00 00 00               | mov qword ptr ds:[rbx+84],rcx        |
@@ -218,20 +225,20 @@ static int offs_sider = 0;
 
 // tournament_id --> trophy_id table
 /*
-00000001509325A1 | 4C 8D 9C 24 70 0A 00 00        | lea r11,qword ptr ss:[rsp+A70]       |
-00000001509325A9 | 49 8B 5B 30                    | mov rbx,qword ptr ds:[r11+30]        |
-00000001509325AD | 49 8B 73 38                    | mov rsi,qword ptr ds:[r11+38]        |
-00000001509325B1 | 49 8B 7B 40                    | mov rdi,qword ptr ds:[r11+40]        |
-
-000000015093258B | 48 63 C1                       | movsxd rax,ecx                       |
-000000015093258E | 8B 44 C4 04                    | mov eax,dword ptr ss:[rsp+rax*8+4]   |
-0000000150932592 | 48 8B 8D 60 09 00 00           | mov rcx,qword ptr ss:[rbp+960]       |
-0000000150932599 | 48 31 E1                       | xor rcx,rsp                          |
+0000000155BBBAD3 | 48 63 C1                           | movsxd rax,ecx                         |
+0000000155BBBAD6 | 8B 44 C4 04                        | mov eax,dword ptr ss:[rsp+rax*8+4]     |
+0000000155BBBADA | 48 8B 8D 40 09 00 00               | mov rcx,qword ptr ss:[rbp+940]         |
+0000000155BBBAE1 | 48 31 E1                           | xor rcx,rsp                            |
+...
+0000000155BBBAE9 | 4C 8D 9C 24 50 0A 00 00            | lea r11,qword ptr ss:[rsp+A50]         |
+0000000155BBBAF1 | 49 8B 5B 30                        | mov rbx,qword ptr ds:[r11+30]          |
+0000000155BBBAF5 | 49 8B 73 38                        | mov rsi,qword ptr ds:[r11+38]          |
+0000000155BBBAF9 | 49 8B 7B 40                        | mov rdi,qword ptr ds:[r11+40]          |
 */
 static BYTE pattern_trophy_table[18] =
     "\x48\x63\xc1"
     "\x8b\x44\xc4\x04"
-    "\x48\x8b\x8d\x60\x09\x00\x00"
+    "\x48\x8b\x8d\x40\x09\x00\x00"
     "\x48\x31\xe1";
 static int offs_trophy_table = 30;
 
