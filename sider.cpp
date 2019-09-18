@@ -202,8 +202,8 @@ struct TROPHY_TABLE_ENTRY {
 
 #define TT_LEN 0x148
 TROPHY_TABLE_ENTRY _trophy_table[TT_LEN];
-typedef unordered_map<WORD,DWORD> trophy_map_t;
-trophy_map_t *_trophy_map;
+DWORD *_trophy_map;
+int64_t _trophy_table_copy_count;
 
 BYTE _variations[128];
 
@@ -509,9 +509,9 @@ extern "C" void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss);
 
 extern "C" void sider_set_settings_hk();
 
-extern "C" WORD sider_trophy_check(WORD tournament_id);
+extern "C" DWORD sider_trophy_check(DWORD tournament_id);
 
-extern "C" WORD sider_trophy_check_hk(WORD tournament_id);
+extern "C" DWORD sider_trophy_check_hk(DWORD tournament_id);
 
 extern "C" void sider_context_reset();
 
@@ -4462,22 +4462,20 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
         dest_ss->stadium, dest_ss->timeofday, dest_ss->weather, dest_ss->season);
 }
 
-WORD sider_trophy_check(WORD trophy_id)
+DWORD sider_trophy_check(DWORD trophy_id)
 {
-    WORD tid = trophy_id;
+    DWORD tid = trophy_id;
     DBG(16) logu_("trophy check:: trophy-id: 0x%0x\n", tid);
     if (_config->_lua_enabled) {
         // lua callbacks
         vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
-            WORD new_tid = tid;
             WORD new_tournament_id = _tournament_id;
             if (module_trophy_rewrite(m, _tournament_id, &new_tournament_id)) {
                 EnterCriticalSection(&_tcs);
-                trophy_map_t::iterator it = _trophy_map->find(new_tournament_id);
-                if (it != _trophy_map->end()) {
-                    new_tid = it->second;
+                DWORD new_tid = _trophy_map[new_tournament_id];
+                if (new_tid != 0) {
                     DBG(16) logu_("trophy check:: rewrite trophy-id: 0x%x --> 0x%x\n", tid, new_tid);
                     LeaveCriticalSection(&_tcs);
                     return new_tid;
@@ -4511,10 +4509,11 @@ void sider_trophy_table(TROPHY_TABLE_ENTRY *tt)
     //logu_("trophy table addr: %p\n", tt);
     EnterCriticalSection(&_tcs);
     for (int i=0; i<TT_LEN; i++) {
-        (*_trophy_map)[tt->tournament_id] = tt->trophy_id;
+        _trophy_map[tt->tournament_id] = tt->trophy_id;
         //logu_("tid: %d (0x%x) --> 0x%x\n", tt->tournament_id, tt->tournament_id, tt->trophy_id);
         tt++;
     }
+    _trophy_table_copy_count++;
     LeaveCriticalSection(&_tcs);
 }
 
@@ -6022,7 +6021,9 @@ DWORD install_func(LPVOID thread_param) {
 #endif
 
     InitializeCriticalSection(&_tcs);
-    _trophy_map = new trophy_map_t();
+    _trophy_table_copy_count = 0;
+    _trophy_map = (DWORD*)malloc(sizeof(DWORD)*65536);
+    memset(_trophy_map, 0, sizeof(sizeof(DWORD)*65536));
 
     log_(L"debug = %d\n", _config->_debug);
     //if (_config->_game_speed) {
@@ -6751,6 +6752,8 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 }
 
                 if (L) { lua_close(L); }
+                if (_trophy_map) { free(_trophy_map); }
+                log_(L"trophy-table copy count: %lld\n", _trophy_table_copy_count);
 
                 if (_key_cache) { delete _key_cache; }
                 if (_rewrite_cache) { delete _rewrite_cache; }
