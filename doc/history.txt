@@ -2,6 +2,12 @@ Sider 6 Release History
 =======================
 
 
+September 20, 2019
+v6.1.1
+- trophy-server with example trophies
+- correction for "stadium_choice" event and context member
+
+
 September 13, 2019
 v6.1.0
 - updated to work with full game, demo is no longer supported

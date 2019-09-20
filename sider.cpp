@@ -202,7 +202,7 @@ struct TROPHY_TABLE_ENTRY {
 
 #define TT_LEN 0x148
 TROPHY_TABLE_ENTRY _trophy_table[TT_LEN];
-DWORD *_trophy_map;
+TROPHY_TABLE_ENTRY _trophy_map[TT_LEN];
 int64_t _trophy_table_copy_count;
 
 BYTE _variations[128];
@@ -4474,11 +4474,13 @@ DWORD sider_trophy_check(DWORD trophy_id)
             WORD new_tournament_id = _tournament_id;
             if (module_trophy_rewrite(m, _tournament_id, &new_tournament_id)) {
                 EnterCriticalSection(&_tcs);
-                DWORD new_tid = _trophy_map[new_tournament_id];
-                if (new_tid != 0) {
-                    DBG(16) logu_("trophy check:: rewrite trophy-id: 0x%x --> 0x%x\n", tid, new_tid);
-                    LeaveCriticalSection(&_tcs);
-                    return new_tid;
+                for (int i=0; i<TT_LEN; i++) {
+                    if (_trophy_map[i].tournament_id == new_tournament_id) {
+                        DWORD new_tid = _trophy_map[i].trophy_id;
+                        DBG(16) logu_("trophy check:: rewrite trophy-id: 0x%x --> 0x%x\n", tid, new_tid);
+                        LeaveCriticalSection(&_tcs);
+                        return new_tid;
+                    }
                 }
                 LeaveCriticalSection(&_tcs);
             }
@@ -4508,11 +4510,7 @@ void sider_trophy_table(TROPHY_TABLE_ENTRY *tt)
 {
     //logu_("trophy table addr: %p\n", tt);
     EnterCriticalSection(&_tcs);
-    for (int i=0; i<TT_LEN; i++) {
-        _trophy_map[tt->tournament_id] = tt->trophy_id;
-        //logu_("tid: %d (0x%x) --> 0x%x\n", tt->tournament_id, tt->tournament_id, tt->trophy_id);
-        tt++;
-    }
+    memcpy(_trophy_map, tt, sizeof(_trophy_map));
     _trophy_table_copy_count++;
     LeaveCriticalSection(&_tcs);
 }
@@ -6022,8 +6020,7 @@ DWORD install_func(LPVOID thread_param) {
 
     InitializeCriticalSection(&_tcs);
     _trophy_table_copy_count = 0;
-    _trophy_map = (DWORD*)malloc(sizeof(DWORD)*65536);
-    memset(_trophy_map, 0, sizeof(sizeof(DWORD)*65536));
+    memset(_trophy_map, 0, sizeof(_trophy_map));
 
     log_(L"debug = %d\n", _config->_debug);
     //if (_config->_game_speed) {
@@ -6752,7 +6749,6 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 }
 
                 if (L) { lua_close(L); }
-                if (_trophy_map) { free(_trophy_map); }
                 log_(L"trophy-table copy count: %lld\n", _trophy_table_copy_count);
 
                 if (_key_cache) { delete _key_cache; }

@@ -1,7 +1,7 @@
 Sider 6 for Pro Evolution Soccer 2020
 =====================================
 Copyright (C) 2018-2019 juce
-Version 6.1.0
+Version 6.1.1
 
 
 
@@ -237,7 +237,7 @@ CREDITS:
 --------
 Game research: nesa24, juce, digitalfoxx, zlac
 Programming: juce
-Testing: zlac, nesa24, Chuny, Hawke, sonofsam69, Cesc Fabregas
+Testing: zlac, nesa24, Chuny, Hawke, sonofsam69, Cesc Fabregas, Paul LFC
 Blue Champions League ball: Hawke and digitalfoxx
 Trophies: MJTS-140914
 
