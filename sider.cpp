@@ -4631,6 +4631,7 @@ void sider_kit_status(KIT_STATUS_INFO *ksi, TASK_UNIFORM_IMPL *tu_impl)
 
 void sider_set_team_for_kits(KIT_STATUS_INFO *ksi, DWORD team_id_encoded, LONGLONG r8, DWORD *which)
 {
+    logu_("sider_set_team_for_kits: ksi=%p, which=%p\n", ksi, which);
     if (ksi && which) {
         if (which == &(ksi->home_team_id_encoded)) {
             logu_("sider_set_team_for_kits: home=%d, is_edit_mode=%d\n", decode_team_id(team_id_encoded), ksi->is_edit_mode);
@@ -6338,14 +6339,14 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_def_stadium_name > 0 &&
             cfg->_hp_at_context_reset > 0 &&
             cfg->_hp_at_set_stadium_choice > 0 &&
-            //cfg->_hp_at_check_kit_choice > 0 &&
+            cfg->_hp_at_check_kit_choice > 0 &&
             //cfg->_hp_at_get_uniparam > 0 &&
             cfg->_hp_at_data_ready > 0 &&
             //cfg->_hp_at_call_to_move > 0 &&
-            //cfg->_hp_at_kit_status > 0 &&
-            //cfg->_hp_at_set_team_for_kits > 0 &&
-            //cfg->_hp_at_clear_team_for_kits > 0 &&
-            //cfg->_hp_at_uniparam_loaded > 0 &&
+            cfg->_hp_at_kit_status > 0 &&
+            cfg->_hp_at_set_team_for_kits > 0 &&
+            cfg->_hp_at_clear_team_for_kits > 0 &&
+            cfg->_hp_at_uniparam_loaded > 0 &&
             true
         );
     }
@@ -6448,9 +6449,7 @@ bool hook_if_all_found() {
             log_(L"sider_stadium_name: %p\n", sider_stadium_name_hk);
             log_(L"sider_def_stadium_name: %p\n", sider_def_stadium_name_hk);
             log_(L"sider_set_stadium_choice: %p\n", sider_set_stadium_choice_hk);
-            /*
             log_(L"sider_check_kit_choice: %p\n", sider_check_kit_choice_hk);
-            */
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
             //log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
 
@@ -6506,18 +6505,18 @@ bool hook_if_all_found() {
 
             hook_jmp(_config->_hp_at_data_ready, (BYTE*)sider_data_ready_hk, 0);
 
-            /*
             hook_call(_config->_hp_at_check_kit_choice, (BYTE*)sider_check_kit_choice_hk, 0);
 
+            /*
             _uniparam_base = get_target_location2(_config->_hp_at_get_uniparam);
             log_(L"_uniparam_base = %p\n", _uniparam_base);
+            */
 
             hook_call_rdx(_config->_hp_at_kit_status, (BYTE*)sider_kit_status_hk, 2);
 
-            hook_call_rcx(_config->_hp_at_set_team_for_kits, (BYTE*)sider_set_team_for_kits_hk, 2);
-            hook_call(_config->_hp_at_clear_team_for_kits, (BYTE*)sider_clear_team_for_kits_hk, 1);
+            hook_call_rcx(_config->_hp_at_set_team_for_kits, (BYTE*)sider_set_team_for_kits_hk, 1);
+            hook_call(_config->_hp_at_clear_team_for_kits, (BYTE*)sider_clear_team_for_kits_hk, 4);
             hook_call_rdx(_config->_hp_at_uniparam_loaded, (BYTE*)sider_loaded_uniparam_hk, 0);
-            */
 
             BYTE *old_moved_call = _config->_hp_at_def_stadium_name + def_stadium_name_moved_call_offs_old;
             BYTE *new_moved_call = _config->_hp_at_def_stadium_name + def_stadium_name_moved_call_offs_new;

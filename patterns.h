@@ -384,15 +384,17 @@ static int def_stadium_name_moved_call_offs_old = 0x08;
 static int def_stadium_name_moved_call_offs_new = 0x14;
 
 /*
-000000014A382487 | 49 89 06                        | mov qword ptr ds:[r14],rax             | a little before kit choice is read
-000000014A38248A | 41 C6 87 FE FF FF FF 01         | mov byte ptr ds:[r15-2],1              |
-000000014A382492 | 41 C6 07 00                     | mov byte ptr ds:[r15],0                |
+0000000140C60B17 | 48 89 45 00                        | mov qword ptr ss:[rbp],rax             | before kit choice read
+0000000140C60B1B | 41 C6 45 FE 01                     | mov byte ptr ds:[r13-2],1              |
+0000000140C60B20 | 41 C6 45 00 00                     | mov byte ptr ds:[r13],0                |
+0000000140C60B25 | 8B D6                              | mov edx,esi                            |
 */
-static BYTE pattern_check_kit_choice[16] =
-    "\x49\x89\x06"
-    "\x41\xc6\x87\xfe\xff\xff\xff\x01"
-    "\x41\xc6\x07\x00";
-static int offs_check_kit_choice = 3;
+static BYTE pattern_check_kit_choice[17] =
+    "\x48\x89\x45\x00"
+    "\x41\xc6\x45\xfe\x01"
+    "\x41\xc6\x45\x00\x00"
+    "\x8b\xd6";
+static int offs_check_kit_choice = 4;
 
 /*
 Find the code location where the "base addr" is read, and remember this addr.
@@ -455,11 +457,15 @@ static int offs_call_to_move = 0x68-0x50;
 00000001505F09CC | 44 0F B6 4B 4E                     | movzx r9d,byte ptr ds:[rbx+4E]       |
 00000001505F09D1 | 44 0F B6 43 4D                     | movzx r8d,byte ptr ds:[rbx+4D]       |
 00000001505F09D6 | 0F B6 53 4C                        | movzx edx,byte ptr ds:[rbx+4C]       |
+
+0000000141E7521D | 44 0F B6 4B 4A                     | movzx r9d,byte ptr ds:[rbx+4A]         |
+0000000141E75222 | 44 0F B6 43 49                     | movzx r8d,byte ptr ds:[rbx+49]         |
+0000000141E75227 | 0F B6 53 48                        | movzx edx,byte ptr ds:[rbx+48]         |
 */
 static BYTE pattern_kit_status[15] =
-    "\x44\x0f\xb6\x4b\x4e"
-    "\x44\x0f\xb6\x43\x4d"
-    "\x0f\xb6\x53\x4c";
+    "\x44\x0f\xb6\x4b\x4a"
+    "\x44\x0f\xb6\x43\x49"
+    "\x0f\xb6\x53\x48";
 static int offs_kit_status = 0;
 
 /*
@@ -467,41 +473,59 @@ static int offs_kit_status = 0;
 0000000150A725A1 | 81 E2 FF 3F 00 00                  | and edx,3FFF                         |
 0000000150A725A7 | 31 C2                              | xor edx,eax                          |
 0000000150A725A9 | 41 89 51 10                        | mov dword ptr ds:[r9+10],edx         | set team id (edit mode?)
+
+0000000141E747CC | 33 D0                              | xor edx,eax                            |
+0000000141E747CE | 81 E2 FF 3F 00 00                  | and edx,3FFF                           |
+0000000141E747D4 | 33 D0                              | xor edx,eax                            |
+0000000141E747D6 | 41 89 11                           | mov dword ptr ds:[r9],edx              | set team id
+0000000141E747D9 | 40 B6 01                           | mov sil,1                              |
 */
-static BYTE pattern_set_team_for_kits[15] =
-    "\x31\xc2"
+static BYTE pattern_set_team_for_kits[17] =
+    "\x33\xd0"
     "\x81\xe2\xff\x3f\x00\x00"
-    "\x31\xc2"
-    "\x41\x89\x51\x10";
+    "\x33\xd0"
+    "\x41\x89\x11"
+    "\x40\xb6\x01";
 static int offs_set_team_for_kits = 0;
 
 /*
 0000000150A74D73 | 89 8A FC FF FF FF                  | mov dword ptr ds:[rdx-4],ecx         | clear (reset) team id (for kits)
 0000000150A74D79 | C7 42 18 FF FF 00 00               | mov dword ptr ds:[rdx+18],FFFF       |
 0000000150A74D80 | C7 42 30 FF FF FF FF               | mov dword ptr ds:[rdx+30],FFFFFFFF   |
+
+00000001561F1320 | 89 0A                              | mov dword ptr ds:[rdx],ecx             | clear team for kits
+00000001561F1322 | C7 42 18 FF FF 00 00               | mov dword ptr ds:[rdx+18],FFFF         |
+00000001561F1329 | C7 42 30 FF FF FF FF               | mov dword ptr ds:[rdx+30],FFFFFFFF     |
+...
+00000001561F1364 | 66 45 89 51 49                     | mov word ptr ds:[r9+49],r10w           |
+00000001561F1369 | 45 88 51 48                        | mov byte ptr ds:[r9+48],r10b           |
+00000001561F136D | C3                                 | ret                                    |
 */
-static BYTE pattern_clear_team_for_kits[21] =
-    "\x89\x8a\xfc\xff\xff\xff"
-    "\xc7\x42\x18\xff\xff\x00\x00"
-    "\xc7\x42\x30\xff\xff\xff\xff";
-static int offs_clear_team_for_kits = 0;
+static BYTE pattern_clear_team_for_kits[11] =
+    //"\x89\x0a"
+    //"\xc7\x42\x18\xff\xff\x00\x00"
+    //"\xc7\x42\x30\xff\xff\xff\xff";
+    "\x66\x45\x89\x51\x49"
+    "\x45\x88\x51\x48"
+    "\xc3";
+static int offs_clear_team_for_kits = -(0x364-0x320);
 
 /*
-00000001509C77EE | C7 44 24 40 01 00 00 00            | mov dword ptr ss:[rsp+40],1          | loaded uniparam
-00000001509C77F6 | 45 31 C0                           | xor r8d,r8d                          |
-00000001509C77F9 | 41 8D 50 20                        | lea edx,qword ptr ds:[r8+20]         |
-00000001509C77FD | 48 8D 4C 24 40                     | lea rcx,qword ptr ss:[rsp+40]        |
+0000000141E40B7F | C7 44 24 40 01 00 00 00            | mov dword ptr ss:[rsp+40],1            | loaded uniparam
+0000000141E40B87 | 45 33 C0                           | xor r8d,r8d                            |
+0000000141E40B8A | 41 8D 50 20                        | lea edx,qword ptr ds:[r8+20]           |
+0000000141E40B8E | 48 8D 4C 24 40                     | lea rcx,qword ptr ss:[rsp+40]          |
 ...
-00000001509C781E | 48 89 46 40                        | mov qword ptr ds:[rsi+40],rax        | wrote +0x40
-00000001509C7822 | C6 46 62 01                        | mov byte ptr ds:[rsi+62],1           |
-00000001509C7826 | 48 8B 5C 24 48                     | mov rbx,qword ptr ss:[rsp+48]        |
-00000001509C782B | 48 8B 74 24 50                     | mov rsi,qword ptr ss:[rsp+50]        |
+0000000141E40BAF | 48 89 46 50                        | mov qword ptr ds:[rsi+50],rax          | wrote +0x50
+0000000141E40BB3 | C6 46 7B 01                        | mov byte ptr ds:[rsi+7B],1             |
+0000000141E40BB7 | 48 8B 5C 24 48                     | mov rbx,qword ptr ss:[rsp+48]          |
+0000000141E40BBC | 48 8B 74 24 50                     | mov rsi,qword ptr ss:[rsp+50]          |
 */
 static BYTE pattern_uniparam_loaded[19] =
-    "\x48\x89\x46\x40"
-    "\xc6\x46\x62\x01"
+    "\x48\x89\x46\x50"
+    "\xc6\x46\x7b\x01"
     "\x48\x8b\x5c\x24\x48"
     "\x48\x8b\x74\x24\x50";
-static int offs_uniparam_loaded = -(0x81e - 0x7ee - 8);
+static int offs_uniparam_loaded = -(0xbaf - 0xb7f - 8);
 
 #endif

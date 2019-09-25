@@ -339,32 +339,32 @@ sider_set_stadium_choice_hk proc
 
 sider_set_stadium_choice_hk endp
 
-;000000014A382487 | 49 89 06                        | mov qword ptr ds:[r14],rax             | a little before kit choice is read
-;000000014A38248A | 41 C6 87 FE FF FF FF 01         | mov byte ptr ds:[r15-2],1              |
-;000000014A382492 | 41 C6 07 00                     | mov byte ptr ds:[r15],0                |
+;0000000140C60B17 | 48 89 45 00                        | mov qword ptr ss:[rbp],rax             |
+;0000000140C60B1B | 41 C6 45 FE 01                     | mov byte ptr ds:[r13-2],1              |
+;0000000140C60B20 | 41 C6 45 00 00                     | mov byte ptr ds:[r13],0                |
+;0000000140C60B25 | 8B D6                              | mov edx,esi                            |
 
 sider_check_kit_choice_hk proc
 
         push    rcx
-        push    rdx
         push    r8
         push    r9
         push    r10
         push    r11
-        push    r15
-        sub     rsp,20h
-        mov     rcx,rdi   ;mis - match info struct
-        mov     rdx,rbx   ;0/1 - home/away
+        push    r14
+        sub     rsp,28h
+        mov     rcx,r14   ;mis - match info struct
+        mov     rdx,r10   ;0/1 - home/away
         call    sider_check_kit_choice
-        add     rsp,20h
-        pop     r15
-        mov     byte ptr [r15-2],1
-        mov     byte ptr [r15],0
+        add     rsp,28h
+        pop     r14
+        mov     byte ptr [r13-2],1
+        mov     byte ptr [r13],0
+        mov     edx,esi
         pop     r11
         pop     r10
         pop     r9
         pop     r8
-        pop     rdx
         pop     rcx
         ret
 
@@ -409,6 +409,10 @@ sider_data_ready_hk endp
 ;00000001505F09D1 | 44 0F B6 43 4D                     | movzx r8d,byte ptr ds:[rbx+4D]       |
 ;00000001505F09D6 | 0F B6 53 4C                        | movzx edx,byte ptr ds:[rbx+4C]       |
 
+;0000000141E7521D | 44 0F B6 4B 4A                     | movzx r9d,byte ptr ds:[rbx+4A]         |
+;0000000141E75222 | 44 0F B6 43 49                     | movzx r8d,byte ptr ds:[rbx+49]         |
+;0000000141E75227 | 0F B6 53 48                        | movzx edx,byte ptr ds:[rbx+48]         |
+
 sider_kit_status_hk proc
 
         push    rcx
@@ -419,9 +423,9 @@ sider_kit_status_hk proc
         mov     rcx,rbx
         mov     rdx,rax
         call    sider_kit_status
-        movzx   r9d, byte ptr [rbx+4eh]
-        movzx   r8d, byte ptr [rbx+4dh]
-        movzx   rdx, byte ptr [rbx+4ch]
+        movzx   r9d, byte ptr [rbx+4ah]
+        movzx   r8d, byte ptr [rbx+49h]
+        movzx   rdx, byte ptr [rbx+48h]
         add     rsp,28h
         pop     rax
         pop     r11
@@ -431,10 +435,10 @@ sider_kit_status_hk proc
 
 sider_kit_status_hk endp
 
-;0000000150A7259F | 31 C2                              | xor edx,eax                          |
-;0000000150A725A1 | 81 E2 FF 3F 00 00                  | and edx,3FFF                         |
-;0000000150A725A7 | 31 C2                              | xor edx,eax                          |
-;0000000150A725A9 | 41 89 51 10                        | mov dword ptr ds:[r9+10],edx         | set team id (for kits)
+;0000000141E747CC | 33 D0                              | xor edx,eax                            |
+;0000000141E747CE | 81 E2 FF 3F 00 00                  | and edx,3FFF                           |
+;0000000141E747D4 | 33 D0                              | xor edx,eax                            |
+;0000000141E747D6 | 41 89 11                           | mov dword ptr ds:[r9],edx              | set team id (for kits)
 
 sider_set_team_for_kits_hk proc
 
@@ -446,9 +450,8 @@ sider_set_team_for_kits_hk proc
         xor     edx,eax
         and     edx,3fffh
         xor     edx,eax
-        mov     dword ptr [r9+10h],edx
+        mov     dword ptr [r9],edx
         mov     rcx,rbx
-        add     r9,10h
         call    sider_set_team_for_kits
         mov     rcx,3fffh
         add     rsp,28h
@@ -460,9 +463,9 @@ sider_set_team_for_kits_hk proc
 
 sider_set_team_for_kits_hk endp
 
-;0000000150A74D73 | 89 8A FC FF FF FF                  | mov dword ptr ds:[rdx-4],ecx         | clear (reset) team id (for kits)
-;0000000150A74D79 | C7 42 18 FF FF 00 00               | mov dword ptr ds:[rdx+18],FFFF       |
-;0000000150A74D80 | C7 42 30 FF FF FF FF               | mov dword ptr ds:[rdx+30],FFFFFFFF   |
+;00000001561F1320 | 89 0A                              | mov dword ptr ds:[rdx],ecx             | clear team for kits
+;00000001561F1322 | C7 42 18 FF FF 00 00               | mov dword ptr ds:[rdx+18],FFFF         |
+;00000001561F1329 | C7 42 30 FF FF FF FF               | mov dword ptr ds:[rdx+30],FFFFFFFF     |
 
 sider_clear_team_for_kits_hk proc
 
@@ -473,10 +476,10 @@ sider_clear_team_for_kits_hk proc
         push    r10
         push    r11
         sub     rsp,28h
-        mov     dword ptr [rdx-4h],ecx
+        mov     dword ptr [rdx],ecx
         mov     dword ptr [rdx+18h],0ffffh
+        mov     dword ptr [rdx+30h],0ffffffffh
         mov     rcx,rbx
-        sub     rdx,4
         call    sider_clear_team_for_kits
         mov     rax,3fffh
         add     rsp,28h
@@ -490,9 +493,9 @@ sider_clear_team_for_kits_hk proc
 
 sider_clear_team_for_kits_hk endp
 
-;00000001509C77F6 | 45 31 C0                           | xor r8d,r8d                          |
-;00000001509C77F9 | 41 8D 50 20                        | lea edx,qword ptr ds:[r8+20]         |
-;00000001509C77FD | 48 8D 4C 24 40                     | lea rcx,qword ptr ss:[rsp+40]        |
+;00000001404BE666 | 45 33 C0                           | xor r8d,r8d                            |
+;00000001404BE669 | 41 8D 50 20                        | lea edx,qword ptr ds:[r8+20]           |
+;00000001404BE66D | 48 8D 4C 24 40                     | lea rcx,qword ptr ss:[rsp+40]          |
 
 sider_loaded_uniparam_hk proc
 
@@ -505,7 +508,7 @@ sider_loaded_uniparam_hk proc
         sub     rsp,28h
         mov     rcx,rax
         call    sider_loaded_uniparam
-        mov     [rsi+38h],rax
+        mov     [rsi+48h],rax
         add     rsp,28h
         pop     r11
         pop     r10
