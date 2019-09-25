@@ -148,7 +148,7 @@ struct TEAM_INFO_STRUCT {
     SHIRTCOLOR_STRUCT players[2];
     SHIRTCOLOR_STRUCT goalkeepers[1];
     SHIRTCOLOR_STRUCT extra_players[7];
-    BYTE unknown3[0x58];
+    BYTE unknown3[0x68];
 };
 
 struct MATCH_INFO_STRUCT {
@@ -166,8 +166,8 @@ struct MATCH_INFO_STRUCT {
     BYTE unknown3[3];
     DWORD unknown4[3];
     BYTE extra_time_choice;
+    BYTE unknown7;
     BYTE unknown8;
-    BYTE unknown9;
     BYTE penalties;
     BYTE unknown_zero;
     BYTE num_subs; //subs
@@ -179,10 +179,18 @@ struct MATCH_INFO_STRUCT {
     DWORD weather_choice;   // 0-fine, 1-rainy, 2-snow
     DWORD weather_effects; // 0-nothing, 1-later, 2-now
     DWORD season_choice; // 0-summer, 1-winter
-    DWORD unknown7[10];
+    DWORD unknown9[10];
     struct STAD_STRUCT stad;
-    DWORD unknown10;
-    BYTE unknown11[0x98];
+    BYTE unknown10[0xa0];
+    BYTE home_player_kit_id;
+    BYTE home_player_kit_id_unknown[3];
+    BYTE away_player_kit_id;
+    BYTE away_player_kit_id_unknown[3];
+    BYTE home_gk_kit_id;
+    BYTE home_gk_kit_id_unknown[3];
+    BYTE away_gk_kit_id;
+    BYTE away_gk_kit_id_unknown[3];
+    DWORD unknown11[2];
     TEAM_INFO_STRUCT home;
     TEAM_INFO_STRUCT away;
 };
@@ -2447,14 +2455,14 @@ bool module_set_kits(module_t *m, MATCH_INFO_STRUCT *mi)
         // push params
         lua_pushvalue(L, 1); // ctx
 
-        int home_kit_id = (int)*((BYTE*)mi + 0x120);
+        int home_kit_id = mi->home_player_kit_id;
         if (home_kit_id > 9) { home_kit_id = 9; }
         if (home_kit_id < 0) { home_kit_id = 0; }
         lua_newtable(L); // home team info
         home_ki = find_kit_info(get_team_id(mi, 0), suffix_map[home_kit_id]);
         get_kit_info_to_lua_table(L, -1, home_ki);
 
-        int away_kit_id = (int)*((BYTE*)mi + 0x124);
+        int away_kit_id = mi->away_player_kit_id;
         if (away_kit_id > 9) { away_kit_id = 9; }
         if (away_kit_id < 0) { away_kit_id = 0; }
         lua_newtable(L); // away team info
@@ -4940,7 +4948,7 @@ static int sider_context_get_current_kit_id(lua_State *L)
     int home_or_away = luaL_checkinteger(L, 1);
     if (_mi) {
         lua_pop(L, 1);
-        BYTE *kit = (BYTE*)_mi + 0x120 + home_or_away*4;
+        BYTE *kit = &((home_or_away==0) ? _mi->home_player_kit_id : _mi->away_player_kit_id);
         lua_pushinteger(L, *kit);
         return 1;
     }
@@ -4992,7 +5000,7 @@ static int sider_context_set_current_kit_id(lua_State *L)
     int home_or_away = luaL_checkinteger(L, 1);
     int kit_id = luaL_checkinteger(L, 2);
     lua_pop(L, 2);
-    BYTE *kit = (BYTE*)_mi + 0x120 + home_or_away*4;
+    BYTE *kit = &((home_or_away==0) ? _mi->home_player_kit_id : _mi->away_player_kit_id);
     *kit = kit_id;
     return 0;
 }
@@ -5063,14 +5071,18 @@ static int sider_context_set_kit(lua_State *L)
             if (_mi) {
                 TEAM_INFO_STRUCT *ti = (home_or_away == 0) ? &(_mi->home) : &(_mi->away);
                 radar_color = (kit_id < 2) ? ti->players[kit_id].color1 : ti->extra_players[kit_id-2].color1;
+logu_("set_kit:: _mi ptr: %p\n", _mi);
+logu_("set_kit:: _mi->home ptr: %p\n", &(_mi->home));
+logu_("set_kit:: _mi->away ptr: %p\n", &(_mi->away));
+logu_("set_kit:: ti ptr: %p\n", ti);
+logu_("set_kit:: radar_color ptr: %p\n", radar_color);
             }
             else {
                 logu_("warning: unable to set radar color - no MATCH_INFO_STRUCT pointer\n");
             }
 
-            // also apply shirt colors, because they control radar
-            // in non-exhibition games, and are important for color-matching of kits
-            // during initial kit selection
+            // also apply shirt colors, because in non-exhibition games
+            // they are important for color-matching of kits during initial kit selection
             TEAM_INFO_STRUCT *ti = (home_or_away == 0) ? _home_team_info : _away_team_info;
             if (ti && decode_team_id(ti->team_id_encoded) == team_id) {
                 SHIRTCOLOR_STRUCT *scs = NULL;
