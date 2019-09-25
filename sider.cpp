@@ -625,7 +625,7 @@ static BYTE* get_uniparam()
         if (obj1) {
             void *obj2 = *(void**)((BYTE*)obj1+8);
             if (obj2) {
-                void *obj3 = *(void**)((BYTE*)obj2+0x40);
+                void *obj3 = *(void**)((BYTE*)obj2+0x50);
                 if (obj3) {
                     return *(BYTE**)((BYTE*)obj3+8);
                 }
@@ -5493,7 +5493,6 @@ static void push_context_table(lua_State *L)
     lua_pushcfunction(L, sider_context_register);
     lua_setfield(L, -2, "register");
 
-    /* commenting out "kits" table for now
     lua_newtable(L);
     lua_pushcfunction(L, sider_context_get_current_team_id);
     lua_setfield(L, -2, "get_current_team");
@@ -5516,7 +5515,6 @@ static void push_context_table(lua_State *L)
     lua_pushcfunction(L, sider_context_refresh_kit);
     lua_setfield(L, -2, "refresh");
     lua_setfield(L, -2, "kits");
-    */
 }
 
 static void push_env_table(lua_State *L, const wchar_t *script_name)
@@ -6340,7 +6338,7 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_context_reset > 0 &&
             cfg->_hp_at_set_stadium_choice > 0 &&
             cfg->_hp_at_check_kit_choice > 0 &&
-            //cfg->_hp_at_get_uniparam > 0 &&
+            cfg->_hp_at_get_uniparam > 0 &&
             cfg->_hp_at_data_ready > 0 &&
             //cfg->_hp_at_call_to_move > 0 &&
             cfg->_hp_at_kit_status > 0 &&
@@ -6507,10 +6505,8 @@ bool hook_if_all_found() {
 
             hook_call(_config->_hp_at_check_kit_choice, (BYTE*)sider_check_kit_choice_hk, 0);
 
-            /*
             _uniparam_base = get_target_location2(_config->_hp_at_get_uniparam);
             log_(L"_uniparam_base = %p\n", _uniparam_base);
-            */
 
             hook_call_rdx(_config->_hp_at_kit_status, (BYTE*)sider_kit_status_hk, 2);
 

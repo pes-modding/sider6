@@ -400,18 +400,18 @@ static int offs_check_kit_choice = 4;
 Find the code location where the "base addr" is read, and remember this addr.
 Look for this code sequence:
 
-0000000141D0B86D | 4D 85 FF                        | test r15,r15                       |
-0000000141D0B870 | 75 23                           | jne pes2019.141D0B895              |
-0000000141D0B872 | 48 83 7D 60 10                  | cmp qword ptr ss:[rbp+60],10       |
-0000000141D0B877 | 72 17                           | jb pes2019.141D0B890               |
-0000000141D0B879 | C7 44 24 60 02 00 00 00         | mov dword ptr ss:[rsp+60],2        |
+0000000141E3EC50 | 4D 85 FF                           | test r15,r15                           |
+0000000141E3EC53 | 75 27                              | jne pes2020.141E3EC7C                  |
+0000000141E3EC55 | 48 83 BD B8 00 00 00 10            | cmp qword ptr ss:[rbp+B8],10           |
+0000000141E3EC5D | 72 18                              | jb pes2020.141E3EC77                   |
+0000000141E3EC5F | C7 45 E0 02 00 00 00               | mov dword ptr ss:[rbp-20],2            |
 */
-static BYTE pattern_get_uniparam[21] =
+static BYTE pattern_get_uniparam[23] =
     "\x4d\x85\xff"
-    "\x75\x23"
-    "\x48\x83\x7d\x60\x10"
-    "\x72\x17"
-    "\xc7\x44\x24\x60\x02\x00\x00\x00";
+    "\x75\x27"
+    "\x48\x83\xbd\xb8\x00\x00\x00\x10"
+    "\x72\x18"
+    "\xc7\x45\xe0\x02\x00\x00\x00";
 static int offs_get_uniparam = -4;
 /*
 -- read the last 4 bytes of the code instruction immediately preceeding ours
