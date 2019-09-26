@@ -651,7 +651,7 @@ static char *gk_suffix_map[] = {
     "GK1st",
 };
 
-static BYTE* find_kit_info(int team_id, char *suffix)
+static BYTE* find_kit_info(int team_id, char *suffix, DWORD *len=NULL)
 {
     BYTE *uniparam = get_uniparam();
     if (uniparam) {
@@ -683,6 +683,9 @@ static BYTE* find_kit_info(int team_id, char *suffix)
                                 // matched a licensed kit
                                 logu_("find_kit_info:: name: {%s}\n", (char*)uniparam + cf_name_starting_offs);
                                 free(kit_config_name);
+                                if (len) {
+                                    *len = cf_len;
+                                }
                                 return p;
                             }
                         }
@@ -5054,7 +5057,8 @@ static int sider_context_set_kit(lua_State *L)
     // force refresh of kit
     if (lua_istable(L, 3)) {
         DBG(2048) logu_("set_kit:: team_id=%d, kit_id=%d\n", team_id, kit_id);
-        BYTE *dst_data = find_kit_info(team_id, suffix_map[kit_id]);
+        DWORD len;
+        BYTE *dst_data = find_kit_info(team_id, suffix_map[kit_id], &len);
         if (!dst_data) {
             logu_("problem: cannot find kit info for team %d, kit %d\n", team_id, kit_id);
             lua_pop(L, lua_gettop(L));
@@ -5100,6 +5104,7 @@ logu_("set_kit:: radar_color ptr: %p\n", radar_color);
             }
         }
 
+        memset(dst_data, 0, len);
         set_kit_info_from_lua_table(L, 3, dst_data, radar_color, shirt_color);
     }
     lua_pop(L, lua_gettop(L));
@@ -5113,13 +5118,15 @@ static int sider_context_set_gk_kit(lua_State *L)
     // force refresh of kit
     if (lua_istable(L, 2)) {
         DBG(2048) logu_("set_gk_kit:: team_id=%d\n", team_id);
-        BYTE *dst_data = find_kit_info(team_id, gk_suffix_map[0]);
+        DWORD len;
+        BYTE *dst_data = find_kit_info(team_id, gk_suffix_map[0], &len);
         if (!dst_data) {
             logu_("problem: cannot find GK kit info for team %d\n", team_id);
             lua_pop(L, lua_gettop(L));
             return 0;
         }
 
+        memset(dst_data, 0, len);
         set_kit_info_from_lua_table(L, 2, dst_data, NULL, NULL);
     }
     lua_pop(L, lua_gettop(L));
