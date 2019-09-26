@@ -127,6 +127,7 @@ void set_kit_info_from_lua_table(lua_State *L, int index, BYTE *dst, BYTE *radar
     BackNumberY=21       ; 0 to 29
     BackNumberSize=26       ; 0 to 31
     BackNumberSpacing=1       ; 0 to 15
+    BackNumberType=0       ; 0 to 1
     **/
     lua_getfield(L, index, "Name");
     if (lua_isnumber(L, -1)) {
@@ -161,6 +162,11 @@ void set_kit_info_from_lua_table(lua_State *L, int index, BYTE *dst, BYTE *radar
     lua_getfield(L, index, "BackNumberSpacing");
     if (lua_isnumber(L, -1)) {
         set_word_bits(dst+0x18, luaL_checkinteger(L, -1), 10, 14);
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, index, "BackNumberType");
+    if (lua_isnumber(L, -1)) {
+        set_word_bits(dst+0x1c, luaL_checkinteger(L, -1), 2, 3);
     }
     lua_pop(L, 1);
 
@@ -470,6 +476,7 @@ void get_kit_info_to_lua_table(lua_State *L, int index, BYTE *src) {
     BackNumberY=21       ; 0 to 29
     BackNumberSize=26      ; 0 to 31
     BackNumberSpacing=1       ; 0 to 15
+    BackNumberType=0       ; 0 to 1
     **/
     lua_pushinteger(L, get_word_bits(src+0x1e, 0, 1));
     lua_setfield(L, index, "Name");
@@ -485,6 +492,8 @@ void get_kit_info_to_lua_table(lua_State *L, int index, BYTE *src) {
     lua_setfield(L, index, "BackNumberSize");
     lua_pushinteger(L, get_word_bits(src+0x18, 10, 14));
     lua_setfield(L, index, "BackNumberSpacing");
+    lua_pushinteger(L, get_word_bits(src+0x1c, 2, 3));
+    lua_setfield(L, index, "BackNumberType");
 
     /**
     ; shirt - front side
