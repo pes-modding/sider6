@@ -124,7 +124,7 @@ void set_kit_info_from_lua_table(lua_State *L, int index, BYTE *dst, BYTE *radar
     NameShape=0       ; 0=Straight, 1=Light curve, 2=Medium curve, 3=Extreme curve
     NameY=15       ; 0 to 17
     NameSize=15       ; 0 to 31
-    NameWidth=0       ; 0 to 3
+    NameStretch=0       ; 0 to 3
     BackNumberY=21       ; 0 to 29
     BackNumberSize=26       ; 0 to 31
     BackNumberSpacing=1       ; 0 to 15
@@ -150,7 +150,7 @@ void set_kit_info_from_lua_table(lua_State *L, int index, BYTE *dst, BYTE *radar
         set_word_bits(dst+0x1c, luaL_checkinteger(L, -1), 9, 14);
     }
     lua_pop(L, 1);
-    lua_getfield(L, index, "NameWidth");
+    lua_getfield(L, index, "NameStretch");
     if (lua_isnumber(L, -1)) {
         set_word_bits(dst+0x25, luaL_checkinteger(L, -1), 0, 2);
     }
@@ -479,7 +479,7 @@ void get_kit_info_to_lua_table(lua_State *L, int index, BYTE *src) {
     NameShape=0       ; 0=Straight, 1=Light curve, 2=Medium curve, 3=Extreme curve
     NameY=15       ; 0 to 17
     NameSize=15       ; 0 to 31
-    NameWidth=0       ; 0 to 3
+    NameStretch=0       ; 0 to 3
     BackNumberY=21       ; 0 to 29
     BackNumberSize=26      ; 0 to 31
     BackNumberSpacing=1       ; 0 to 15
@@ -494,7 +494,7 @@ void get_kit_info_to_lua_table(lua_State *L, int index, BYTE *src) {
     lua_pushinteger(L, get_word_bits(src+0x1c, 9, 14));
     lua_setfield(L, index, "NameSize");
     lua_pushinteger(L, get_word_bits(src+0x25, 0, 2));
-    lua_setfield(L, index, "NameWidth");
+    lua_setfield(L, index, "NameStretch");
     lua_pushinteger(L, get_word_bits(src+0x18, 0, 5));
     lua_setfield(L, index, "BackNumberY");
     lua_pushinteger(L, get_word_bits(src+0x18, 5, 10));
