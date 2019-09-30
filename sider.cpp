@@ -2,6 +2,7 @@
 
 //#include "stdafx.h"
 #include <windows.h>
+#include <shellapi.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
@@ -273,7 +274,7 @@ typedef HRESULT (*PFN_IDXGIFactory1_CreateSwapChain)(IDXGIFactory1 *pFactory, IU
 typedef HRESULT (*PFN_IDXGISwapChain_Present)(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags);
 PFN_CreateDXGIFactory1 _org_CreateDXGIFactory1;
 PFN_IDXGIFactory1_CreateSwapChain _org_CreateSwapChain;
-PFN_IDXGISwapChain_Present _org_Present;
+PFN_IDXGISwapChain_Present _org_Present(NULL);
 
 HRESULT sider_CreateDXGIFactory1(REFIID riid, void **ppFactory);
 HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain);
@@ -577,6 +578,7 @@ static DWORD dwThreadId;
 static DWORD hookingThreadId = 0;
 static HMODULE myHDLL;
 static HHOOK handle = 0;
+static HHOOK handle1 = 0;
 static HHOOK kb_handle = 0;
 
 bool _overlay_on(false);
@@ -981,6 +983,7 @@ public:
     int _rewrite_cache_ttl_sec;
     wstring _section_name;
     vector<wstring> _cpk_roots;
+    wstring _steam_link;
     vector<wstring> _exe_names;
     vector<wstring> _module_names;
     bool _close_sider_on_exit;
@@ -1050,6 +1053,7 @@ public:
                  _close_sider_on_exit(false),
                  _start_minimized(false),
                  _free_side_select(false),
+                 _steam_link(L""),
                  _overlay_enabled(false),
                  _overlay_on_from_start(false),
                  _overlay_font(DEFAULT_OVERLAY_FONT),
@@ -1121,6 +1125,9 @@ public:
             }
             else if (wcscmp(L"overlay.font", key.c_str())==0) {
                 _overlay_font = value;
+            }
+            else if (wcscmp(L"steam.link", key.c_str())==0) {
+                _steam_link = value;
             }
             else if (wcscmp(L"overlay.text-color", key.c_str())==0) {
                 if (value.size() >= 8) {
@@ -3772,10 +3779,8 @@ HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
 {
     //logu_("Present called for swapChain: %p\n", swapChain);
 
-    if (_config->_overlay_enabled) {
-        if (kb_handle == NULL) {
-            kb_handle = SetWindowsHookEx(WH_KEYBOARD, sider_keyboard_proc, myHDLL, GetCurrentThreadId());
-        }
+    if (kb_handle == NULL && _config->_overlay_enabled) {
+        kb_handle = SetWindowsHookEx(WH_KEYBOARD, sider_keyboard_proc, myHDLL, GetCurrentThreadId());
     }
 
     if (_reload_modified) {
@@ -6661,6 +6666,7 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 if (!write_mapping_info(_config)) {
                     return FALSE;
                 }
+
                 return TRUE;
             }
 
@@ -6724,6 +6730,18 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 logu_("Utf8org: %d, %d\n", f3-s3, f4-s4);
                 **/
 
+                // set up a thread-scope hook
+                setHook1();
+
+                // tell sider.exe to unhook CBT
+                if (!_config->_steam_link.empty()) {
+                    HWND main_hwnd = FindWindow(SIDERCLS, NULL);
+                    if (main_hwnd) {
+                        PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
+                        log_(L"Posted message for sider.exe to quit\n");
+                    }
+                }
+
                 delete match;
                 return TRUE;
             }
@@ -6771,7 +6789,7 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 if (_content_stats) { delete _content_stats; }
 
                 // tell sider.exe to close
-                if (_config->_close_sider_on_exit) {
+                if (_config->_close_sider_on_exit || !_config->_steam_link.empty()) {
                     main_hwnd = FindWindow(SIDERCLS, NULL);
                     if (main_hwnd) {
                         PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
@@ -6865,10 +6883,30 @@ void setHook()
     log_(L"handle = %p\n", handle);
 }
 
-void unsetHook()
+void setHook1()
 {
+    handle1 = SetWindowsHookEx(WH_CBT, meconnect, myHDLL, GetCurrentThreadId());
+    log_(L"handle1 = %p\n", handle1);
+}
+
+
+void unsetHook(bool all)
+{
+    open_log_(L"windows hooks: handle = %p\n", handle);
     UnhookWindowsHookEx(handle);
-    if (kb_handle) {
+    log_(L"windows hooks: CBT unhooked\n");
+    if (all && kb_handle) {
         UnhookWindowsHookEx(kb_handle);
+        log_(L"windows hooks: keyboard unhooked\n");
     }
+    close_log_();
+}
+
+bool get_steam_link(wstring &steam_link) {
+    if (_config && !_config->_steam_link.empty()) {
+        steam_link = _config->_steam_link;
+        return true;
+    }
+    steam_link = L"";
+    return false;
 }

@@ -7,7 +7,6 @@
 
 HMODULE dll;
 HOOKPROC addr;
-HHOOK handle;
 HWND hWnd;
 DWORD hookThreadId;
 
@@ -22,8 +21,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         case SIDER_MSG_EXIT:
             // Exit the application when the window closes
+            open_log_(L"WindowProc:: uMsg=0x%x\n", uMsg);
+            close_log_();
             unsetHook();
             PostQuitMessage(1);
+            open_log_(L"WindowsProc:: sider exiting\n");
+            close_log_();
             return true;
     }
     return DefWindowProc(hwnd,uMsg,wParam,lParam);
@@ -126,6 +129,14 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     if (!_inited) {
         _inited = true;
         init();
+    }
+
+    // launch game, if specified in config
+    wstring steam_link;
+    if (get_steam_link(steam_link)) {
+        open_log_(L"steam.link: %s\n", steam_link.c_str());
+        close_log_();
+        ShellExecute(NULL,L"open",steam_link.c_str(),0,0,SW_SHOWNORMAL);
     }
 
     //SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
