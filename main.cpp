@@ -21,12 +21,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         case SIDER_MSG_EXIT:
             // Exit the application when the window closes
-            open_log_(L"WindowProc:: uMsg=0x%x\n", uMsg);
-            close_log_();
+            append_to_log_(L"WindowProc:: uMsg=0x%x\n", uMsg);
             unsetHook();
-            PostQuitMessage(1);
-            open_log_(L"WindowsProc:: sider exiting\n");
-            close_log_();
+            append_to_log_(L"WindowProc:: sider exiting\n");
+            PostQuitMessage(0);
             return true;
     }
     return DefWindowProc(hwnd,uMsg,wParam,lParam);

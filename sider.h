@@ -18,6 +18,7 @@ __declspec(dllexport) void logu_(const char *format, ...);
 __declspec(dllexport) void start_log_(const wchar_t *format, ...);
 __declspec(dllexport) void open_log_(const wchar_t *format, ...);
 __declspec(dllexport) void close_log_();
+__declspec(dllexport) void append_to_log_(const wchar_t *format, ...);
 __declspec(dllexport) void get_module_version(HMODULE, wstring&);
 __declspec(dllexport) bool get_steam_link(wstring&);
 __declspec(dllexport) bool start_minimized();

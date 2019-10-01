@@ -6680,6 +6680,9 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 log_(L"Sider DLL: version %s\n", version.c_str());
                 log_(L"Filename match: %s\n", match->c_str());
 
+                // set up a thread-scope hook
+                setHook1();
+
                 _overlay_on = _config->_overlay_on_from_start;
                 _overlay_header = L"sider ";
                 _overlay_header += version;
@@ -6729,9 +6732,6 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 DWORD f4 = GetTickCount();
                 logu_("Utf8org: %d, %d\n", f3-s3, f4-s4);
                 **/
-
-                // set up a thread-scope hook
-                setHook1();
 
                 // tell sider.exe to unhook CBT
                 if (!_config->_steam_link.empty()) {

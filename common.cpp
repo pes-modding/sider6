@@ -80,9 +80,27 @@ __declspec(dllexport) void close_log_()
     if (file) {
         fflush(file);
         fclose(file);
+        file = NULL;
     }
     LeaveCriticalSection(&_log_cs);
     DeleteCriticalSection(&_log_cs);
+}
+
+__declspec(dllexport) void append_to_log_(const wchar_t *format, ...)
+{
+    InitializeCriticalSection(&_log_cs);
+    EnterCriticalSection(&_log_cs);
+    file = _wfopen(dll_log, L"a+");
+    if (file) {
+        va_list params;
+        va_start(params, format);
+        vfwprintf(file, format, params);
+        va_end(params);
+        fflush(file);
+        fclose(file);
+        file = NULL;
+    }
+    LeaveCriticalSection(&_log_cs);
 }
 
 BYTE* get_target_addr(BYTE* call_location)
