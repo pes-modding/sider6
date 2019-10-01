@@ -268,6 +268,7 @@ lookup_cache_t _lookup_cache;
 //pfn_alloc_mem_t _org_alloc_mem;
 
 LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK sider_foreground_idle_proc(int code, WPARAM wParam, LPARAM lParam);
 
 typedef HRESULT (*PFN_CreateDXGIFactory1)(REFIID riid, void **ppFactory);
 typedef HRESULT (*PFN_IDXGIFactory1_CreateSwapChain)(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain);
@@ -6816,6 +6817,10 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
     return TRUE;
 }
 
+LRESULT CALLBACK sider_foreground_idle_proc(int code, WPARAM wParam, LPARAM lParam) {
+    return CallNextHookEx(handle1, code, wParam, lParam);
+}
+
 LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
 {
     if (code < 0) {
@@ -6885,10 +6890,9 @@ void setHook()
 
 void setHook1()
 {
-    handle1 = SetWindowsHookEx(WH_CBT, meconnect, myHDLL, GetCurrentThreadId());
+    handle1 = SetWindowsHookEx(WH_FOREGROUNDIDLE, sider_foreground_idle_proc, myHDLL, GetCurrentThreadId());
     log_(L"handle1 = %p\n", handle1);
 }
-
 
 void unsetHook(bool all)
 {
