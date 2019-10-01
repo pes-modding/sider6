@@ -984,7 +984,7 @@ public:
     int _rewrite_cache_ttl_sec;
     wstring _section_name;
     vector<wstring> _cpk_roots;
-    wstring _steam_link;
+    wstring _start_game;
     vector<wstring> _exe_names;
     vector<wstring> _module_names;
     bool _close_sider_on_exit;
@@ -1054,7 +1054,7 @@ public:
                  _close_sider_on_exit(false),
                  _start_minimized(false),
                  _free_side_select(false),
-                 _steam_link(L""),
+                 _start_game(L""),
                  _overlay_enabled(false),
                  _overlay_on_from_start(false),
                  _overlay_font(DEFAULT_OVERLAY_FONT),
@@ -1127,8 +1127,8 @@ public:
             else if (wcscmp(L"overlay.font", key.c_str())==0) {
                 _overlay_font = value;
             }
-            else if (wcscmp(L"steam.link", key.c_str())==0) {
-                _steam_link = value;
+            else if (wcscmp(L"start.game", key.c_str())==0) {
+                _start_game = value;
             }
             else if (wcscmp(L"overlay.text-color", key.c_str())==0) {
                 if (value.size() >= 8) {
@@ -6076,6 +6076,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"vkey.reload-1 = 0x%02x\n", _config->_vkey_reload_1);
     log_(L"vkey.reload-2 = 0x%02x\n", _config->_vkey_reload_2);
     log_(L"close.on.exit = %d\n", _config->_close_sider_on_exit);
+    log_(L"start.game = %s\n", _config->_start_game.c_str());
     log_(L"match.minutes = %d\n", _config->_num_minutes);
 
     log_(L"--------------------------\n");
@@ -6735,7 +6736,7 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 **/
 
                 // tell sider.exe to unhook CBT
-                if (!_config->_steam_link.empty()) {
+                if (!_config->_start_game.empty()) {
                     HWND main_hwnd = FindWindow(SIDERCLS, NULL);
                     if (main_hwnd) {
                         PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
@@ -6790,7 +6791,7 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 if (_content_stats) { delete _content_stats; }
 
                 // tell sider.exe to close
-                if (_config->_close_sider_on_exit || !_config->_steam_link.empty()) {
+                if (_config->_close_sider_on_exit || !_config->_start_game.empty()) {
                     main_hwnd = FindWindow(SIDERCLS, NULL);
                     if (main_hwnd) {
                         PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
@@ -6906,11 +6907,11 @@ void unsetHook(bool all)
     close_log_();
 }
 
-bool get_steam_link(wstring &steam_link) {
-    if (_config && !_config->_steam_link.empty()) {
-        steam_link = _config->_steam_link;
+bool get_start_game(wstring &start_game) {
+    if (_config && !_config->_start_game.empty()) {
+        start_game = _config->_start_game;
         return true;
     }
-    steam_link = L"";
+    start_game = L"";
     return false;
 }

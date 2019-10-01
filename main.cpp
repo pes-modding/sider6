@@ -130,11 +130,11 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     }
 
     // launch game, if specified in config
-    wstring steam_link;
-    if (get_steam_link(steam_link)) {
-        open_log_(L"steam.link: %s\n", steam_link.c_str());
+    wstring start_game;
+    if (get_start_game(start_game)) {
+        open_log_(L"start.game: %s\n", start_game.c_str());
         close_log_();
-        ShellExecute(NULL,L"open",steam_link.c_str(),0,0,SW_SHOWNORMAL);
+        ShellExecute(NULL,L"open",start_game.c_str(),0,0,SW_SHOWNORMAL);
     }
 
     //SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
