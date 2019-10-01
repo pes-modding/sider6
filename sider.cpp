@@ -21,6 +21,8 @@
 #include "libz.h"
 #include "kitinfo.h"
 
+#define CACHE_SIZE 64
+
 #define DIRECTINPUT_VERSION 0x0800
 #define SAFE_RELEASE(x) if (x) { x->Release(); x = NULL; }
 
@@ -261,8 +263,69 @@ struct uniparam_team_t {
 };
 bool _dummified(false);
 
-typedef unordered_map<string,wstring*> lookup_cache_t;
-lookup_cache_t _lookup_cache;
+class lock_t {
+public:
+    CRITICAL_SECTION *_cs;
+    lock_t(CRITICAL_SECTION *cs) : _cs(cs) {
+        EnterCriticalSection(_cs);
+    }
+    ~lock_t() {
+        LeaveCriticalSection(_cs);
+    }
+};
+
+struct lookup_cache_value_t {
+    char key[512];
+    wstring *value;
+};
+class lookup_cache_t {
+public:
+    lookup_cache_value_t *_data;
+    size_t _data_count;
+    size_t _next;
+    CRITICAL_SECTION _cs;
+
+    lookup_cache_t(size_t data_count) : _data_count(data_count), _next(0) {
+        InitializeCriticalSection(&_cs);
+        _data = (lookup_cache_value_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, _data_count*sizeof(lookup_cache_value_t));
+    }
+    ~lookup_cache_t() {
+        DeleteCriticalSection(&_cs);
+        HeapFree(GetProcessHeap(), 0, _data);
+    }
+    inline void store(size_t i, const char *key, wstring *value) {
+        _data[i].key[0] = '\0';
+        strncat(_data[i].key, key, 511);
+        _data[i].value = value;
+    }
+    bool get(const char *key, wstring **value) {
+        lock_t lock(&_cs);
+        for (int i = 0; i < _data_count; i++) {
+            if (strncmp(_data[i].key, key, 512)==0) {
+                *value = _data[i].value;
+                return true;
+            }
+        }
+        return false;
+    }
+    void put(const char *key, wstring *value) {
+        lock_t lock(&_cs);
+        for (int i = 0; i < _data_count; i++) {
+            if (strcmp(_data[i].key, key)==0) {
+                store(i, key, value);
+                return;
+            }
+        }
+        store(_next, key, value);
+        _next = (_next + 1) % _data_count;
+    }
+    size_t size() {
+        return _data_count;
+    }
+};
+
+//typedef unordered_map<string,wstring*> lookup_cache_t;
+lookup_cache_t _lookup_cache(CACHE_SIZE);
 
 //typedef LONGLONG (*pfn_alloc_mem_t)(BUFFER_INFO *bi, LONGLONG size);
 //pfn_alloc_mem_t _org_alloc_mem;
@@ -700,17 +763,6 @@ static BYTE* find_kit_info(int team_id, char *suffix, DWORD *len=NULL)
     }
     return NULL;
 }
-
-class lock_t {
-public:
-    CRITICAL_SECTION *_cs;
-    lock_t(CRITICAL_SECTION *cs) : _cs(cs) {
-        EnterCriticalSection(_cs);
-    }
-    ~lock_t() {
-        LeaveCriticalSection(_cs);
-    }
-};
 
 class hook_cache_t {
 public:
@@ -1432,6 +1484,63 @@ stats_t *_content_stats(NULL);
 #define PERF_TIMER(stats)
 #endif
 
+struct cache2_value_t {
+    char key[512];
+    void *value;
+    uint64_t expires;
+};
+class cache2_t {
+public:
+    cache2_value_t *_data;
+    size_t _data_count;
+    size_t _next;
+    CRITICAL_SECTION _cs;
+    uint64_t _ttl_msec;
+
+    cache2_t(size_t data_count, uint64_t ttl_sec) : _data_count(data_count), _ttl_msec(ttl_sec * 1000), _next(0) {
+        InitializeCriticalSection(&_cs);
+        _data = (cache2_value_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, _data_count*sizeof(cache2_value_t));
+    }
+    ~cache2_t() {
+        DeleteCriticalSection(&_cs);
+        HeapFree(GetProcessHeap(), 0, _data);
+    }
+    inline void store(size_t i, const char *key, void *value) {
+        _data[i].key[0] = '\0';
+        strncat(_data[i].key, key, 511);
+        _data[i].value = value;
+        _data[i].expires = GetTickCount64() + _ttl_msec;
+    }
+    bool lookup(const char *key, void **value) {
+        lock_t lock(&_cs);
+        for (int i = 0; i < _data_count; i++) {
+            if (strncmp(_data[i].key, key, 512)==0) {
+                uint64_t ltime = GetTickCount64();
+                if (_data[i].expires > ltime) {
+                    *value = _data[i].value;
+                    return true;
+                }
+                return false;
+            }
+        }
+        return false;
+    }
+    void put(const char *key, void *value) {
+        lock_t lock(&_cs);
+        for (int i = 0; i < _data_count; i++) {
+            if (strcmp(_data[i].key, key)==0) {
+                store(i, key, value);
+                return;
+            }
+        }
+        store(_next, key, value);
+        _next = (_next + 1) % _data_count;
+    }
+    size_t size() {
+        return _data_count;
+    }
+};
+
 typedef unordered_map<string,cache_map_value_t> cache_map_t;
 
 class cache_t {
@@ -1501,8 +1610,10 @@ public:
     }
 };
 
-cache_t *_key_cache(NULL);
-cache_t *_rewrite_cache(NULL);
+//cache_t *_key_cache(NULL);
+//cache_t *_rewrite_cache(NULL);
+cache2_t *_key_cache(NULL);
+cache2_t *_rewrite_cache(NULL);
 
 static BYTE* dummify_uniparam(BYTE *uniparam, size_t sz, size_t *new_sz)
 {
@@ -2022,6 +2133,18 @@ wstring* have_live_file(char *file_name)
         // no cache
         return _have_live_file(file_name);
     }
+
+    wstring *res(NULL);
+    if (_lookup_cache.get(file_name, &res)) {
+        return res;
+    }
+    else {
+        res = _have_live_file(file_name);
+        _lookup_cache.put(file_name, res);
+        return res;
+    }
+
+    /*
     unordered_map<string,wstring*>::iterator it;
     EnterCriticalSection(&_cs);
     it = _lookup_cache.find(string(file_name));
@@ -2032,10 +2155,11 @@ wstring* have_live_file(char *file_name)
     else {
         //logu_("_lookup_cache MISS for (%s)\n", file_name);
         wstring* res = _have_live_file(file_name);
-        _lookup_cache.insert(pair<string,wstring*>(string(file_name),res));
+        if (res) _lookup_cache.insert(pair<string,wstring*>(string(file_name),res));
         LeaveCriticalSection(&_cs);
         return res;
     }
+    */
 }
 
 bool file_exists(wstring *fullpath, LONGLONG *size)
@@ -2918,6 +3042,25 @@ wstring* have_content(char *file_name)
         module_make_key(m, file_name, key, sizeof(key));
 
         if (_config->_lookup_cache_enabled) {
+            wstring *res(NULL);
+            if (m->cache->get(key, &res)) {
+                if (res) {
+                    if (_config->_key_cache_ttl_sec) _key_cache->put(file_name, res);
+                    return res;
+                }
+                // this module does not have the file:
+                // move on to next module
+                continue;
+            }
+            else {
+                res = module_get_filepath(m, file_name, key);
+                m->cache->put(key, res);
+                if  (res) {
+                    if (_config->_key_cache_ttl_sec) _key_cache->put(file_name, res);
+                    return res;
+                }
+            }
+            /*
             unordered_map<string,wstring*>::iterator j;
             j = m->cache->find(key);
             if (j != m->cache->end()) {
@@ -2940,6 +3083,7 @@ wstring* have_content(char *file_name)
                     return res;
                 }
             }
+            */
         }
         else {
             // no cache: SLOW! ONLY use for troubleshooting
@@ -5798,7 +5942,7 @@ void init_lua_support()
             memset(m, 0, sizeof(module_t));
             m->filename = new wstring(it->c_str());
             m->last_modified = last_mod_time;
-            m->cache = new lookup_cache_t();
+            m->cache = new lookup_cache_t(CACHE_SIZE);
             m->L = luaL_newstate();
             _curr_m = m;
 
@@ -5949,7 +6093,7 @@ void lua_reload_modified_modules()
         memset(newm, 0, sizeof(module_t));
         newm->filename = new wstring(m->filename->c_str());
         newm->last_modified = last_mod_time;
-        newm->cache = new lookup_cache_t();
+        newm->cache = new lookup_cache_t(CACHE_SIZE);
         newm->L = luaL_newstate();
         _curr_m = newm;
 
@@ -6035,8 +6179,10 @@ DWORD install_func(LPVOID thread_param) {
     _file_to_lookup_size = strlen(_file_to_lookup) + 1 + 4 + 1;
 
     InitializeCriticalSection(&_cs);
-    _key_cache = new cache_t(&_cs, _config->_key_cache_ttl_sec);
-    _rewrite_cache = new cache_t(&_cs, _config->_rewrite_cache_ttl_sec);
+    //_key_cache = new cache_t(&_cs, _config->_key_cache_ttl_sec);
+    //_rewrite_cache = new cache_t(&_cs, _config->_rewrite_cache_ttl_sec);
+    _key_cache = new cache2_t(CACHE_SIZE, _config->_key_cache_ttl_sec);
+    _rewrite_cache = new cache2_t(CACHE_SIZE, _config->_rewrite_cache_ttl_sec);
 #ifdef PERF_TESTING
     _stats = new stats_t(L"have_live");
     _content_stats = new stats_t(L"have_content");
@@ -6784,6 +6930,8 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
 
                 if (L) { lua_close(L); }
                 log_(L"trophy-table copy count: %lld\n", _trophy_table_copy_count);
+
+                log_(L"lookup_cache:: size = %d\n", _lookup_cache.size());
 
                 if (_key_cache) { delete _key_cache; }
                 if (_rewrite_cache) { delete _rewrite_cache; }
