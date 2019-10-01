@@ -6452,7 +6452,7 @@ bool hook_if_all_found() {
             hook_call_rcx(_config->_hp_at_lookup_file, (BYTE*)sider_lookup_file_hk, 3);
         }
 
-        if (_config->_overlay_enabled) {
+        if (_config->_overlay_enabled && _config->_lua_enabled) {
             if (_config->_hp_at_dxgi) {
                 BYTE *addr = get_target_addr(_config->_hp_at_dxgi);
                 BYTE *loc = get_target_location(addr);
