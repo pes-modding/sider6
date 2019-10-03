@@ -6102,7 +6102,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 29
+#define NUM_PATTERNS 31
     BYTE *frag[NUM_PATTERNS];
     frag[0] = lcpk_pattern_at_read_file;
     frag[1] = lcpk_pattern_at_get_size;
@@ -6133,12 +6133,16 @@ DWORD install_func(LPVOID thread_param) {
     frag[26] = pattern_clear_team_for_kits;
     frag[27] = pattern_uniparam_loaded;
     frag[28] = pattern_call_to_move;
+    frag[29] = lcpk_pattern2_at_mem_copy;
+    frag[30] = lcpk_pattern2_at_lookup_file;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[0] = 23;
     _variations[6] = 19;
     _variations[19] = 6;
     _variations[23] = 0;
+    _variations[29] = 3;
+    _variations[30] = 4;
 
     size_t frag_len[NUM_PATTERNS];
     frag_len[0] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_read_file)-1 : 0;
@@ -6169,7 +6173,9 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[25] = _config->_lua_enabled ? sizeof(pattern_set_team_for_kits)-1 : 0;
     frag_len[26] = _config->_lua_enabled ? sizeof(pattern_clear_team_for_kits)-1 : 0;
     frag_len[27] = _config->_lua_enabled ? sizeof(pattern_uniparam_loaded)-1 : 0;
-    frag_len[28] = 0; //_config->_lua_enabled ? sizeof(pattern_call_to_move)-1 : 0;
+    frag_len[28] = _config->_lua_enabled ? sizeof(pattern_call_to_move)-1 : 0;
+    frag_len[29] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_mem_copy)-1 : 0;
+    frag_len[30] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_lookup_file)-1 : 0;
 
     int offs[NUM_PATTERNS];
     offs[0] = lcpk_offs_at_read_file;
@@ -6201,6 +6207,8 @@ DWORD install_func(LPVOID thread_param) {
     offs[26] = offs_clear_team_for_kits;
     offs[27] = offs_uniparam_loaded;
     offs[28] = offs_call_to_move;
+    offs[29] = lcpk_offs_at_mem_copy;
+    offs[30] = lcpk_offs_at_lookup_file;
 
     BYTE **addrs[NUM_PATTERNS];
     addrs[0] = &_config->_hp_at_read_file;
@@ -6232,6 +6240,8 @@ DWORD install_func(LPVOID thread_param) {
     addrs[26] = &_config->_hp_at_clear_team_for_kits;
     addrs[27] = &_config->_hp_at_uniparam_loaded;
     addrs[28] = &_config->_hp_at_call_to_move;
+    addrs[29] = &_config->_hp_at_mem_copy;
+    addrs[30] = &_config->_hp_at_lookup_file;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -6452,7 +6462,7 @@ bool hook_if_all_found() {
             log_(L"sider_check_kit_choice: %p\n", sider_check_kit_choice_hk);
             */
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
-            //log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
+            log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
 
             if (_config->_hook_set_team_id) {
                 BYTE *check_addr = _config->_hp_at_set_team_id - offs_set_team_id + offs_check_set_team_id;
@@ -6499,10 +6509,13 @@ bool hook_if_all_found() {
             //    (BYTE*)pattern_set_stadium_choice_head, sizeof(pattern_set_stadium_choice_head)-1,
             //    (BYTE*)pattern_set_stadium_choice_tail, sizeof(pattern_set_stadium_choice_tail)-1);
 
-            // move next function (right after data_ready)
-            //move_code(_config->_hp_at_data_ready + 11, 1, 7);
-            //DWORD rel_offs = *(DWORD*)(_config->_hp_at_call_to_move + 1) + 1;
-            //patch_at_location(_config->_hp_at_call_to_move + 1, (BYTE*)&rel_offs, sizeof(DWORD));
+            // move next function (right after data_ready), if necessary
+            if (*(BYTE*)(_config->_hp_at_data_ready + 11) != 0xcc) {
+                // there is no extra 0xcc byte (at offset+12), so we need to move code
+                move_code(_config->_hp_at_data_ready + 11, 1, 7);
+                DWORD rel_offs = *(DWORD*)(_config->_hp_at_call_to_move + 1) + 1;
+                patch_at_location(_config->_hp_at_call_to_move + 1, (BYTE*)&rel_offs, sizeof(DWORD));
+            }
 
             hook_jmp(_config->_hp_at_data_ready, (BYTE*)sider_data_ready_hk, 0);
 

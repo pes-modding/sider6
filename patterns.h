@@ -58,6 +58,20 @@ static BYTE lcpk_pattern_at_mem_copy[13] =
     "\x49\x89\xd9"
     "\x4d\x01\xd0"
     "\x4c\x89\xd9";
+
+/*
+000000014FA7839A | 4C 8B 01                           | mov r8,qword ptr ds:[rcx]              |
+000000014FA7839D | 4C 8B CB                           | mov r9,rbx                             |
+000000014FA783A0 | 4D 03 C2                           | add r8,r10                             |
+000000014FA783A3 | 49 8B CB                           | mov rcx,r11                            |
+*/
+static BYTE lcpk_pattern2_at_mem_copy[13] =
+    "\x4c\x8b\x01"
+    "\x4c\x8b\xcb"
+    "\x4d\x03\xc2"
+    "\x49\x8b\xcb";
+
+
 static int lcpk_offs_at_mem_copy = 9;
 
 /*
@@ -69,6 +83,17 @@ static BYTE lcpk_pattern_at_lookup_file[16] =
     "\x48\x8d\x8f\x08\x01\x00\x00"
     "\x49\x89\xf0"
     "\x48\x8d\x54\x24\x20";
+
+/*
+000000014156B02E | 48 8D 8F 08 01 00 00               | lea rcx,qword ptr ds:[rdi+108]         |
+000000014156B035 | 4C 8B C6                           | mov r8,rsi                             |
+000000014156B038 | 48 8D 54 24 20                     | lea rdx,qword ptr ss:[rsp+20]          |
+*/
+static BYTE lcpk_pattern2_at_lookup_file[16] =
+    "\x48\x8d\x8f\x08\x01\x00\x00"
+    "\x4c\x8b\xc6"
+    "\x48\x8d\x54\x24\x20";
+
 static int lcpk_offs_at_lookup_file = 0;
 
 /*
