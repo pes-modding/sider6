@@ -1,7 +1,7 @@
 Sider 6 for Pro Evolution Soccer 2020
 =====================================
 Copyright (C) 2018-2019 juce
-Version 6.1.1
+Version 6.2.0
 
 
 
@@ -41,6 +41,16 @@ SETTINGS (SIDER.INI)
 --------------------
 
 There are several settings you can set in sider.ini:
+
+
+start.game = "steam://rungameid/996470"
+
+- optional setting. If it is specified, then Sider will
+operate in a new "one-click launch" mode: first, Sider will
+launch the game, using the provided steam url, then wait
+for the game to start and for sider.dll to be loaded into
+the game process. After that, sider.exe will exit, but the
+game will continue with Sider activated - via sider.dll.
 
 
 exe.name = "\PES2020.exe"
@@ -237,7 +247,7 @@ CREDITS:
 --------
 Game research: nesa24, juce, digitalfoxx, zlac
 Programming: juce
-Testing: zlac, nesa24, Chuny, Hawke, sonofsam69, Cesc Fabregas, Paul LFC
+Testing: zlac, nesa24, Chuny, Hawke, sonofsam69, Cesc Fabregas, Paul LFC, mota10
 Blue Champions League ball: Hawke and digitalfoxx
 Trophies: MJTS-140914
 

@@ -1,7 +1,7 @@
 Sider 6 Lua Module Programmers Guide
-====================================
-For sider.dll version: 6.1.1
-September 20, 2019
+======================================
+For sider.dll version: 6.2.0 "Sputnik"
+October 4, 2019
 
 
 
@@ -104,7 +104,7 @@ of the game. As more scripts/modules are created by the community
 the context object will probably also change, and include more and more
 information about the game.
 
-As of 6.1.1 release, the context object has the following:
+As of 6.2.0 release, the context object has the following:
 
 ctx.home_team  - id of the home team of the current match, after
                  it is selected in the exhibition match, or the next
@@ -174,6 +174,9 @@ ctx.extra_time - 0/1 flag to indicate if extra time will be played
 
 ctx.penalties  - 0/1 flag to indicate if penalty shootout will be played
 
+ctx.kits       - table of functions for kit manipulation.
+                 (See more details further down)
+
 
 The context object also contains a register function, which has the
 following signature:
@@ -189,6 +192,75 @@ supported events and their handler signatures
 The idea of the context object is that in your handler functions, your
 code will make decisions on what to do, using the information in the
 context.
+
+
+
+ctx.kits
+========
+
+It is a table of helper functions to manipulate kits (uniforms).
+IMPORTANT NOTE: kit operations only work for "licensed" teams, in other
+words, for those that have real kits, not ones made in game editor.
+If your team is unlicensed - use Kit Studio by zlac to convert it
+to a licensed team.
+The table contains the following functions:
+
+
+ctx.kits.get_current_team(home_or_away)
+
+Returns the team id for the currently chosen home or away team -
+depending on the parameter that you pass in:
+    0 - home team
+    1 - away team
+
+
+ctx.kits.get_current_kit_id(home_or_away)
+
+Returns the currently chosen player kit_id for home or away team -
+depending on the parameter that you pass in:
+    0 - home team
+    1 - away team
+
+
+ctx.kits.get(team_id, kit_id)
+
+Returns a table of attributes for a player kit for specified team
+and kit_id. The kit_id can range from 0 to 9. The returned table
+contains all attributes for the requested kit - things like:
+Collar, KitModel, KitFile, BackNumbersFile, and so for. We call
+this collection of attributes a "kit config".
+
+
+ctx.kits.set(team_id, kit_id, kit_cfg, home_or_away)
+
+Sets the kit attributes to the values provided in kit_cfg table,
+for the chosen team and kit. The last parameter is optional: if
+you specify it, then use 0 - for home team, 1 - for away team,
+and sider will update parts of team info in memory that control
+the color of radar. This allows for correct radar colors, and
+also for proper color-matching, when kits are initially chosen
+by the game logic, in such a way that they don't clash.
+
+
+ctx.kits.get_gk(team_id)
+
+Returns a table of attributes for a goalkeeper kit for specified team
+The returned table contains all attributes for the kit, like it is
+with a player kit.
+
+
+ctx.kits.set_gk(team_id, kit_cfg)
+
+Sets the kit attributes to the values provided in kit_cfg table,
+for the chosen team and goalkeeper kit.
+
+
+ctx.kits.refresh(home_or_away)
+
+Forces a refresh of the kit for either home or away team -
+depending on the value of the parameter:
+    0 - home team
+    1 - away team
 
 
 
