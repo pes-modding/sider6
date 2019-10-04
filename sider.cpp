@@ -21,8 +21,6 @@
 #include "libz.h"
 #include "kitinfo.h"
 
-#define CACHE_SIZE 64
-
 #define DIRECTINPUT_VERSION 0x0800
 #define SAFE_RELEASE(x) if (x) { x->Release(); x = NULL; }
 
@@ -328,7 +326,7 @@ public:
 };
 
 //typedef unordered_map<string,wstring*> lookup_cache_t;
-lookup_cache_t _lookup_cache(CACHE_SIZE);
+lookup_cache_t *_lookup_cache(NULL);
 
 //typedef LONGLONG (*pfn_alloc_mem_t)(BUFFER_INFO *bi, LONGLONG size);
 //pfn_alloc_mem_t _org_alloc_mem;
@@ -676,6 +674,7 @@ char _overlay_utf8_image_path[2048];
 #define DEFAULT_GAMEPAD_STICK_SENSITIVITY 0.6
 #define DEFAULT_GAMEPAD_POLL_INTERVAL_MSEC 200
 #define DEFAULT_GAMEPAD_OVERLAY_POLL_INTERVAL_MSEC 32
+#define DEFAULT_CACHE_SIZE 64
 
 wchar_t module_filename[MAX_PATH];
 wchar_t dll_log[MAX_PATH];
@@ -1037,6 +1036,7 @@ public:
     int _dll_mapping_option;
     int _key_cache_ttl_sec;
     int _rewrite_cache_ttl_sec;
+    int _cache_size;
     wstring _section_name;
     vector<wstring> _cpk_roots;
     wstring _start_game;
@@ -1124,6 +1124,7 @@ public:
                  _vkey_reload_2(DEFAULT_VKEY_RELOAD_2),
                  _key_cache_ttl_sec(10),
                  _rewrite_cache_ttl_sec(10),
+                 _cache_size(DEFAULT_CACHE_SIZE),
                  _hp_at_read_file(NULL),
                  _hp_at_get_size(NULL),
                  _hp_at_extend_cpk(NULL),
@@ -1385,6 +1386,13 @@ public:
         _rewrite_cache_ttl_sec = GetPrivateProfileInt(_section_name.c_str(),
             L"rewrite-cache.ttl-sec", _rewrite_cache_ttl_sec,
             config_ini);
+
+        _cache_size = GetPrivateProfileInt(_section_name.c_str(),
+            L"cache.size", _cache_size,
+            config_ini);
+        if (_cache_size < 1) {
+            _cache_size = DEFAULT_CACHE_SIZE;
+        }
 
         _num_minutes = GetPrivateProfileInt(_section_name.c_str(),
             L"match.minutes", _num_minutes,
@@ -2154,12 +2162,12 @@ wstring* have_live_file(char *file_name)
     }
 
     wstring *res(NULL);
-    if (_lookup_cache.get(file_name, &res)) {
+    if (_lookup_cache->get(file_name, &res)) {
         return res;
     }
     else {
         res = _have_live_file(file_name);
-        _lookup_cache.put(file_name, res);
+        _lookup_cache->put(file_name, res);
         return res;
     }
 
@@ -5961,7 +5969,7 @@ void init_lua_support()
             memset(m, 0, sizeof(module_t));
             m->filename = new wstring(it->c_str());
             m->last_modified = last_mod_time;
-            m->cache = new lookup_cache_t(CACHE_SIZE);
+            m->cache = new lookup_cache_t(_config->_cache_size);
             m->L = luaL_newstate();
             _curr_m = m;
 
@@ -6112,7 +6120,7 @@ void lua_reload_modified_modules()
         memset(newm, 0, sizeof(module_t));
         newm->filename = new wstring(m->filename->c_str());
         newm->last_modified = last_mod_time;
-        newm->cache = new lookup_cache_t(CACHE_SIZE);
+        newm->cache = new lookup_cache_t(_config->_cache_size);
         newm->L = luaL_newstate();
         _curr_m = newm;
 
@@ -6198,14 +6206,14 @@ DWORD install_func(LPVOID thread_param) {
     _file_to_lookup_size = strlen(_file_to_lookup) + 1 + 4 + 1;
 
     InitializeCriticalSection(&_cs);
-    //_key_cache = new cache_t(&_cs, _config->_key_cache_ttl_sec);
-    //_rewrite_cache = new cache_t(&_cs, _config->_rewrite_cache_ttl_sec);
-    _key_cache = new cache2_t(CACHE_SIZE, _config->_key_cache_ttl_sec);
-    _rewrite_cache = new cache2_t(CACHE_SIZE, _config->_rewrite_cache_ttl_sec);
+    _key_cache = new cache2_t(_config->_cache_size, _config->_key_cache_ttl_sec);
+    _rewrite_cache = new cache2_t(_config->_cache_size, _config->_rewrite_cache_ttl_sec);
 #ifdef PERF_TESTING
     _stats = new stats_t(L"have_live");
     _content_stats = new stats_t(L"have_content");
 #endif
+
+    _lookup_cache = new lookup_cache_t(_config->_cache_size);
 
     InitializeCriticalSection(&_tcs);
     _trophy_table_copy_count = 0;
@@ -6226,6 +6234,7 @@ DWORD install_func(LPVOID thread_param) {
     //log_(L"address-cache.enabled = %d\n", (int)(!_config->_ac_off));
     log_(L"key-cache.ttl-sec = %d\n", _config->_key_cache_ttl_sec);
     log_(L"rewrite-cache.ttl-sec = %d\n", _config->_rewrite_cache_ttl_sec);
+    log_(L"cache.size = %d\n", _config->_cache_size);
     log_(L"start.minimized = %d\n", _config->_start_minimized);
     log_(L"free.side.select = %d\n", _config->_free_side_select);
     log_(L"overlay.enabled = %d\n", _config->_overlay_enabled);
@@ -6964,7 +6973,10 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 if (L) { lua_close(L); }
                 log_(L"trophy-table copy count: %lld\n", _trophy_table_copy_count);
 
-                log_(L"lookup_cache:: size = %d\n", _lookup_cache.size());
+                if (_lookup_cache) {
+                    log_(L"lookup_cache:: size = %d\n", _lookup_cache->size());
+                    delete _lookup_cache;
+                }
 
                 if (_key_cache) { delete _key_cache; }
                 if (_rewrite_cache) { delete _rewrite_cache; }
