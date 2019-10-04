@@ -2,6 +2,18 @@ Sider 6 Release History
 =======================
 
 
+October 4, 2019 "Sputnik" release
+v6.2.0
+- support for kit manipulation (via "kits" table in context)
+- new "one-click launch" way of running the game with sider
+- performance optimizations and misc fixes
+
+
+October 2, 2019
+v6.1.2
+- support for 1.01.02 game exe
+
+
 September 20, 2019
 v6.1.1
 - trophy-server with example trophies
