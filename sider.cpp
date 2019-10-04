@@ -300,7 +300,8 @@ public:
     }
     bool get(const char *key, wstring **value) {
         lock_t lock(&_cs);
-        for (int i = 0; i < _data_count; i++) {
+        int i = (_next > 0) ? _next-1 : _data_count-1;
+        for (; i != _next; i = (i > 0) ? i-1 : _data_count-1) {
             if (strncmp(_data[i].key, key, 512)==0) {
                 *value = _data[i].value;
                 return true;
@@ -310,7 +311,9 @@ public:
     }
     void put(const char *key, wstring *value) {
         lock_t lock(&_cs);
-        for (int i = 0; i < _data_count; i++) {
+        //int i = (_next > 0) ? _next-1 : _data_count-1;
+        //for (; i != _next; i = (i > 0) ? i-1 : _data_count-1) {
+        for (int i=0; i<_data_count; i++) {
             if (strcmp(_data[i].key, key)==0) {
                 store(i, key, value);
                 return;
@@ -1496,12 +1499,23 @@ public:
     size_t _next;
     CRITICAL_SECTION _cs;
     uint64_t _ttl_msec;
+    stats_t *_lookup_stats;
+    stats_t *_put_stats;
 
-    cache2_t(size_t data_count, uint64_t ttl_sec) : _data_count(data_count), _ttl_msec(ttl_sec * 1000), _next(0) {
+    cache2_t(size_t data_count, uint64_t ttl_sec) :
+            _data_count(data_count), _ttl_msec(ttl_sec * 1000), _next(0),
+            _lookup_stats(0), _put_stats(0) {
         InitializeCriticalSection(&_cs);
         _data = (cache2_value_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, _data_count*sizeof(cache2_value_t));
+#ifdef PERF_TESTING
+        _lookup_stats = new stats_t(L"lookups");
+        _put_stats = new stats_t(L"puts");
+#endif
     }
     ~cache2_t() {
+        log_(L"cache: size:%d\n", size());
+        if (_lookup_stats) { delete _lookup_stats; }
+        if (_put_stats) { delete _put_stats; }
         DeleteCriticalSection(&_cs);
         HeapFree(GetProcessHeap(), 0, _data);
     }
@@ -1513,7 +1527,9 @@ public:
     }
     bool lookup(const char *key, void **value) {
         lock_t lock(&_cs);
-        for (int i = 0; i < _data_count; i++) {
+        PERF_TIMER(_lookup_stats);
+        int i = (_next > 0) ? _next-1 : _data_count-1;
+        for (; i != _next; i = (i > 0) ? i-1 : _data_count-1) {
             if (strncmp(_data[i].key, key, 512)==0) {
                 uint64_t ltime = GetTickCount64();
                 if (_data[i].expires > ltime) {
@@ -1527,7 +1543,10 @@ public:
     }
     void put(const char *key, void *value) {
         lock_t lock(&_cs);
-        for (int i = 0; i < _data_count; i++) {
+        PERF_TIMER(_put_stats);
+        //int i = (_next > 0) ? _next-1 : _data_count-1;
+        //for (; i != _next; i = (i > 0) ? i-1 : _data_count-1) {
+        for (int i=0; i<_data_count; i++) {
             if (strcmp(_data[i].key, key)==0) {
                 store(i, key, value);
                 return;
@@ -6841,7 +6860,8 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 log_(L"Sider DLL: version %s\n", version.c_str());
                 log_(L"Filename match: %s\n", match->c_str());
 
-                // set up a thread-scope hook
+                // set up a thread-scope hook, to replace global hook
+                // so that we stay mapped in game process
                 setHook1();
 
                 _overlay_on = _config->_overlay_on_from_start;
@@ -6894,7 +6914,7 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 logu_("Utf8org: %d, %d\n", f3-s3, f4-s4);
                 **/
 
-                // tell sider.exe to unhook CBT
+                // tell sider.exe to unhook CBT and quit
                 if (!_config->_start_game.empty()) {
                     HWND main_hwnd = FindWindow(SIDERCLS, NULL);
                     if (main_hwnd) {
@@ -6959,10 +6979,15 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                         log_(L"Posted message for sider.exe to quit\n");
                     }
                 }
-                log_(L"All done.\n");
-                close_log_();
                 DeleteCriticalSection(&_cs);
                 DeleteCriticalSection(&_tcs);
+
+                if (handle1) {
+                    UnhookWindowsHookEx(handle1);
+                }
+
+                log_(L"All done.\n");
+                close_log_();
             }
             break;
 
