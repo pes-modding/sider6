@@ -1,6 +1,6 @@
 --[[
 ==================================
-trophy.lua - version 1.2
+trophy.lua - version 1.3
 
 programming by: juce
 using save data files by: saintric
@@ -28,7 +28,7 @@ All game modes are supported: League, Cup, Master League.
 
 --]]
 
-local m = { version = "1.2" }
+local m = { version = "1.3" }
 
 local content_root = ".\\content\\trophy-server"
 local tcontent = nil
@@ -98,7 +98,7 @@ function m.init(ctx)
     ctx.register("trophy_rewrite", m.trophy_rewrite)
     ctx.register("livecpk_make_key", m.make_key)
     ctx.register("livecpk_get_filepath", m.get_filepath)
-    ctx.register("overlay_on", m.overlay_on)
+    --ctx.register("overlay_on", m.overlay_on)
     ctx.register("key_down", m.key_down)
     log("trophy server: version " .. m.version)
 end
