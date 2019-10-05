@@ -5830,10 +5830,10 @@ static const void *luaL_checkcdata(lua_State *L, int narg)
 }
 
 static int sider_kmp_search(lua_State *L) {
-    size_t pattern_len;
-    const char *pattern = luaL_checklstring(L, 1, &pattern_len);
-    const char *frm = *(const char**)luaL_checkcdata(L, 2);
-    const char *to = *(const char**)luaL_checkcdata(L, 3);
+    const char *pattern = luaL_checkstring(L, 1);
+    size_t pattern_len = (size_t)luaL_checkint(L, 2);
+    const char *frm = *(const char**)luaL_checkcdata(L, 3);
+    const char *to = *(const char**)luaL_checkcdata(L, 4);
     //logu_("sider_kmp_search: pattern=%p, pattern_len=%d, frm=%p, to=%p\n", pattern, pattern_len, frm, to);
     const char *res = kmp_search(pattern, pattern_len, frm, to);
     //logu_("sider_kmp_search: res=%p\n", res);

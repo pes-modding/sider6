@@ -31,7 +31,7 @@
 // If the pattern is found, a pointer to the start of the earliest match in 'text' is returned. Otherwise NULL is returned.
 // However in the case that malloc() fails, NULL is also returned.
 const char *kmp_search(const char *pattern, size_t pattern_len, const char *text, const char *to) {
-	if (pattern[0] == '\0')
+	if (pattern_len == 0)
 		return text;  // Immediate match
 	
 	// Allocate memory for LSP table
