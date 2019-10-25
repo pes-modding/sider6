@@ -272,8 +272,10 @@ public:
     }
 };
 
+/**
+#define LOOKUP_CACHE_KEY_LEN 512
 struct lookup_cache_value_t {
-    char key[512];
+    char key[LOOKUP_CACHE_KEY_LEN];
     wstring *value;
 };
 class lookup_cache_t {
@@ -293,15 +295,15 @@ public:
     }
     inline void store(size_t i, const char *key, wstring *value) {
         _data[i].key[0] = '\0';
-        strncat(_data[i].key, key, 511);
+        strncat(_data[i].key, key, LOOKUP_CACHE_KEY_LEN-1);
         _data[i].value = value;
     }
     bool get(const char *key, wstring **value) {
         lock_t lock(&_cs);
-        int i = (_next > 0) ? _next-1 : _data_count-1;
-        for (; i != _next; i = (i > 0) ? i-1 : _data_count-1) {
-            if (strncmp(_data[i].key, key, 512)==0) {
-                *value = _data[i].value;
+        for (int i=0; i<_data_count; i++) {
+            int j = _data_count - 1 - (_data_count - _next + i) % _data_count;
+            if (strncmp(_data[j].key, key, LOOKUP_CACHE_KEY_LEN)==0) {
+                *value = _data[j].value;
                 return true;
             }
         }
@@ -309,11 +311,10 @@ public:
     }
     void put(const char *key, wstring *value) {
         lock_t lock(&_cs);
-        //int i = (_next > 0) ? _next-1 : _data_count-1;
-        //for (; i != _next; i = (i > 0) ? i-1 : _data_count-1) {
         for (int i=0; i<_data_count; i++) {
-            if (strcmp(_data[i].key, key)==0) {
-                store(i, key, value);
+            int j = _data_count - 1 - (_data_count - _next + i) % _data_count;
+            if (strncmp(_data[j].key, key, LOOKUP_CACHE_KEY_LEN)==0) {
+                store(j, key, value);
                 return;
             }
         }
@@ -327,6 +328,7 @@ public:
 
 //typedef unordered_map<string,wstring*> lookup_cache_t;
 lookup_cache_t *_lookup_cache(NULL);
+**/
 
 //typedef LONGLONG (*pfn_alloc_mem_t)(BUFFER_INFO *bi, LONGLONG size);
 //pfn_alloc_mem_t _org_alloc_mem;
@@ -674,7 +676,7 @@ char _overlay_utf8_image_path[2048];
 #define DEFAULT_GAMEPAD_STICK_SENSITIVITY 0.6
 #define DEFAULT_GAMEPAD_POLL_INTERVAL_MSEC 200
 #define DEFAULT_GAMEPAD_OVERLAY_POLL_INTERVAL_MSEC 32
-#define DEFAULT_CACHE_SIZE 64
+#define DEFAULT_CACHE_SIZE 32
 
 wchar_t module_filename[MAX_PATH];
 wchar_t dll_log[MAX_PATH];
@@ -1393,6 +1395,14 @@ public:
         if (_cache_size < 1) {
             _cache_size = DEFAULT_CACHE_SIZE;
         }
+        else {
+            // need to ensure power-of-2 size
+            size_t v = 1;
+            while ((v << 1) <= _cache_size) {
+                v = v << 1;
+            }
+            _cache_size = v;
+        }
 
         _num_minutes = GetPrivateProfileInt(_section_name.c_str(),
             L"match.minutes", _num_minutes,
@@ -1488,6 +1498,7 @@ public:
 
 stats_t *_stats(NULL);
 stats_t *_content_stats(NULL);
+stats_t *_fileops_stats(NULL);
 
 #ifdef PERF_TESTING
 #define PERF_TIMER(stats) perf_timer_t timer(stats)
@@ -1495,8 +1506,9 @@ stats_t *_content_stats(NULL);
 #define PERF_TIMER(stats)
 #endif
 
+#define CACHE2_KEY_LEN 512
 struct cache2_value_t {
-    char key[512];
+    char key[CACHE2_KEY_LEN];
     void *value;
     uint64_t expires;
 };
@@ -1504,6 +1516,7 @@ class cache2_t {
 public:
     cache2_value_t *_data;
     size_t _data_count;
+    size_t _max_idx;
     size_t _next;
     CRITICAL_SECTION _cs;
     uint64_t _ttl_msec;
@@ -1511,7 +1524,7 @@ public:
     stats_t *_put_stats;
 
     cache2_t(size_t data_count, uint64_t ttl_sec) :
-            _data_count(data_count), _ttl_msec(ttl_sec * 1000), _next(0),
+            _data_count(data_count), _max_idx(data_count-1), _ttl_msec(ttl_sec * 1000), _next(0),
             _lookup_stats(0), _put_stats(0) {
         InitializeCriticalSection(&_cs);
         _data = (cache2_value_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, _data_count*sizeof(cache2_value_t));
@@ -1529,39 +1542,32 @@ public:
     }
     inline void store(size_t i, const char *key, void *value) {
         _data[i].key[0] = '\0';
-        strncat(_data[i].key, key, 511);
+        strncat(_data[i].key, key, CACHE2_KEY_LEN-1);
         _data[i].value = value;
         _data[i].expires = GetTickCount64() + _ttl_msec;
     }
     bool lookup(const char *key, void **value) {
         lock_t lock(&_cs);
         PERF_TIMER(_lookup_stats);
-        int i = (_next > 0) ? _next-1 : _data_count-1;
-        for (; i != _next; i = (i > 0) ? i-1 : _data_count-1) {
-            if (strncmp(_data[i].key, key, 512)==0) {
-                uint64_t ltime = GetTickCount64();
-                if (_data[i].expires > ltime) {
+        uint64_t ltime = GetTickCount64();
+        size_t i = _next;
+        do {
+            i = (i - 1) & _max_idx;
+            if (_data[i].expires > ltime) {
+                if (strncmp(_data[i].key, key, CACHE2_KEY_LEN)==0) {
                     *value = _data[i].value;
                     return true;
                 }
-                return false;
             }
         }
+        while (i != _next);
         return false;
     }
     void put(const char *key, void *value) {
         lock_t lock(&_cs);
         PERF_TIMER(_put_stats);
-        //int i = (_next > 0) ? _next-1 : _data_count-1;
-        //for (; i != _next; i = (i > 0) ? i-1 : _data_count-1) {
-        for (int i=0; i<_data_count; i++) {
-            if (strcmp(_data[i].key, key)==0) {
-                store(i, key, value);
-                return;
-            }
-        }
         store(_next, key, value);
-        _next = (_next + 1) % _data_count;
+        _next = (_next + 1) & _max_idx;
     }
     size_t size() {
         return _data_count;
@@ -1573,14 +1579,14 @@ typedef unordered_map<string,cache_map_value_t> cache_map_t;
 class cache_t {
     cache_map_t _map;
     uint64_t _ttl_msec;
-    CRITICAL_SECTION *_kcs;
+    CRITICAL_SECTION _kcs;
     int debug;
     stats_t *_lookup_stats;
     stats_t *_put_stats;
 public:
-    cache_t(CRITICAL_SECTION *cs, int ttl_sec) :
-        _lookup_stats(NULL), _put_stats(NULL),
-        _kcs(cs), _ttl_msec(ttl_sec * 1000) {
+    cache_t(int ttl_sec) :
+        _lookup_stats(NULL), _put_stats(NULL), _ttl_msec(ttl_sec * 1000) {
+        InitializeCriticalSection(&_kcs);
 #ifdef PERF_TESTING
         _lookup_stats = new stats_t(L"lookups");
         _put_stats = new stats_t(L"puts");
@@ -1590,9 +1596,10 @@ public:
         log_(L"cache: size:%d\n", _map.size());
         if (_lookup_stats) { delete _lookup_stats; }
         if (_put_stats) { delete _put_stats; }
+        DeleteCriticalSection(&_kcs);
     }
-    bool lookup(char *filename, void **res) {
-        lock_t lock(_kcs);
+    bool lookup(const char *filename, void **res) {
+        lock_t lock(&_kcs);
         PERF_TIMER(_lookup_stats);
         cache_map_t::iterator i = _map.find(filename);
         if (i != _map.end()) {
@@ -1616,7 +1623,7 @@ public:
         *res = NULL;
         return false;
     }
-    void put(char *filename, void *value) {
+    void put(const char *filename, void *value) {
         PERF_TIMER(_put_stats);
         uint64_t ltime = GetTickCount64();
         cache_map_value_t v;
@@ -1624,7 +1631,7 @@ public:
         v.expires = ltime + _ttl_msec;
         DBG(32) logu_("cache::put: %s --> (%p|%llu)\n", (filename)?filename:"(NULL)", v.value, v.expires);
         {
-            lock_t lock(_kcs);
+            lock_t lock(&_kcs);
             pair<cache_map_t::iterator,bool> res = _map.insert(
                 pair<string,cache_map_value_t>(filename, v));
             if (!res.second) {
@@ -1635,12 +1642,13 @@ public:
             }
         }
     }
+    size_t size() {
+        return _map.size();
+    }
 };
 
 //cache_t *_key_cache(NULL);
-//cache_t *_rewrite_cache(NULL);
-cache2_t *_key_cache(NULL);
-cache2_t *_rewrite_cache(NULL);
+cache2_t *_small_key_cache(NULL);
 
 static BYTE* dummify_uniparam(BYTE *uniparam, size_t sz, size_t *new_sz)
 {
@@ -1871,7 +1879,7 @@ static BYTE* dummify_uniparam(BYTE *uniparam, size_t sz, size_t *new_sz)
 int _rewrite_count(0);
 
 struct module_t {
-    lookup_cache_t *cache;
+    //lookup_cache_t *cache;
     lua_State* L;
     wstring *filename;
     FILETIME last_modified;
@@ -2115,7 +2123,7 @@ BOOL sider_object_enum_callback(LPCDIDEVICEOBJECTINSTANCE lpddoi, LPVOID pvRef)
     return DIENUM_CONTINUE;
 }
 
-wstring* _have_live_file(char *file_name)
+wchar_t* _have_live_file(char *file_name)
 {
     wchar_t *unicode_filename = Utf8::utf8ToUnicode(file_name);
     //wchar_t unicode_filename[512];
@@ -2144,7 +2152,8 @@ wstring* _have_live_file(char *file_name)
         {
             CloseHandle(handle);
             Utf8::free(unicode_filename);
-            return new wstring(fn);
+            //return new wstring(fn);
+            return wcsdup(fn);
         }
     }
 
@@ -2152,47 +2161,16 @@ wstring* _have_live_file(char *file_name)
     return NULL;
 }
 
-wstring* have_live_file(char *file_name)
+wchar_t* have_live_file(char *file_name)
 {
     PERF_TIMER(_stats);
-    //logu_("have_live_file: %p --> %s\n", (DWORD)file_name, file_name);
-    if (!_config->_lookup_cache_enabled) {
-        // no cache
-        return _have_live_file(file_name);
-    }
-
-    wstring *res(NULL);
-    if (_lookup_cache->get(file_name, &res)) {
-        return res;
-    }
-    else {
-        res = _have_live_file(file_name);
-        _lookup_cache->put(file_name, res);
-        return res;
-    }
-
-    /*
-    unordered_map<string,wstring*>::iterator it;
-    EnterCriticalSection(&_cs);
-    it = _lookup_cache.find(string(file_name));
-    if (it != _lookup_cache.end()) {
-        LeaveCriticalSection(&_cs);
-        return it->second;
-    }
-    else {
-        //logu_("_lookup_cache MISS for (%s)\n", file_name);
-        wstring* res = _have_live_file(file_name);
-        if (res) _lookup_cache.insert(pair<string,wstring*>(string(file_name),res));
-        LeaveCriticalSection(&_cs);
-        return res;
-    }
-    */
+    return _have_live_file(file_name);
 }
 
-bool file_exists(wstring *fullpath, LONGLONG *size)
+bool file_exists(wchar_t *fullpath, LONGLONG *size)
 {
     HANDLE handle = CreateFileW(
-        fullpath->c_str(),     // file to open
+        fullpath,     // file to open
         GENERIC_READ,          // open for reading
         FILE_SHARE_READ,       // share for reading
         NULL,                  // default security
@@ -2980,9 +2958,9 @@ void module_make_key(module_t *m, const char *file_name, char *key, size_t key_m
     }
 }
 
-wstring *module_get_filepath(module_t *m, const char *file_name, char *key)
+wchar_t *module_get_filepath(module_t *m, const char *file_name, char *key)
 {
-    wstring *res = NULL;
+    wchar_t *res = NULL;
     if (m->evt_lcpk_get_filepath != 0) {
         lock_t lock(&_cs);
         lua_pushvalue(m->L, m->evt_lcpk_get_filepath);
@@ -2998,9 +2976,10 @@ wstring *module_get_filepath(module_t *m, const char *file_name, char *key)
         }
         else if (lua_isstring(L, -1)) {
             const char *s = luaL_checkstring(L, -1);
-            wchar_t *ws = Utf8::utf8ToUnicode((void*)s);
-            res = new wstring(ws);
-            Utf8::free(ws);
+            res = Utf8::utf8ToUnicode((void*)s);
+            //wchar_t *ws = Utf8::utf8ToUnicode((void*)s);
+            //res = new wstring(ws);
+            //Utf8::free(ws);
         }
         lua_pop(L, 1);
 
@@ -3018,6 +2997,7 @@ bool do_rewrite(char *file_name)
     char key[512];
     char *res = NULL;
 
+    /***
     if (_config->_rewrite_cache_ttl_sec) {
         if (_rewrite_cache->lookup(file_name, (void**)&res)) {
             // rewrite-cache: for performance
@@ -3027,6 +3007,7 @@ bool do_rewrite(char *file_name)
             return res != NULL;
         }
     }
+    ***/
 
     vector<module_t*>::iterator i;
     for (i = _modules.begin(); i != _modules.end(); i++) {
@@ -3034,29 +3015,23 @@ bool do_rewrite(char *file_name)
         if (m->evt_lcpk_rewrite != 0) {
             res = module_rewrite(m, file_name);
             if (res) {
-                if (_config->_rewrite_cache_ttl_sec) _rewrite_cache->put(file_name, res);
+                //if (_config->_rewrite_cache_ttl_sec) _rewrite_cache->put(file_name, res);
                 strcpy(file_name, res);
                 return true;
             }
         }
     }
 
-    if (_config->_rewrite_cache_ttl_sec) _rewrite_cache->put(file_name, res);
+    //if (_config->_rewrite_cache_ttl_sec) _rewrite_cache->put(file_name, res);
     return false;
 }
 
-wstring* have_content(char *file_name)
+wchar_t* have_content(char *file_name)
 {
     PERF_TIMER(_content_stats);
     char key[512];
-    wstring *res = NULL;
+    wchar_t *res = NULL;
 
-    if (_config->_key_cache_ttl_sec) {
-        if (_key_cache->lookup(file_name, (void**)&res)) {
-            // key-cache: for performance
-            return res;
-        }
-    }
     vector<module_t*>::iterator i;
     //logu_("have_content: %p --> %s\n", (DWORD)file_name, file_name);
     for (i = _modules.begin(); i != _modules.end(); i++) {
@@ -3068,61 +3043,11 @@ wstring* have_content(char *file_name)
 
         module_make_key(m, file_name, key, sizeof(key));
 
-        if (_config->_lookup_cache_enabled) {
-            wstring *res(NULL);
-            if (m->cache->get(key, &res)) {
-                if (res) {
-                    if (_config->_key_cache_ttl_sec) _key_cache->put(file_name, res);
-                    return res;
-                }
-                // this module does not have the file:
-                // move on to next module
-                continue;
-            }
-            else {
-                res = module_get_filepath(m, file_name, key);
-                m->cache->put(key, res);
-                if  (res) {
-                    if (_config->_key_cache_ttl_sec) _key_cache->put(file_name, res);
-                    return res;
-                }
-            }
-            /*
-            unordered_map<string,wstring*>::iterator j;
-            j = m->cache->find(key);
-            if (j != m->cache->end()) {
-                if (j->second != NULL) {
-                    if (_config->_key_cache_ttl_sec) _key_cache->put(file_name, j->second);
-                    return j->second;
-                }
-                // this module does not have the file:
-                // move on to next module
-                continue;
-            }
-            else {
-                wstring *res = module_get_filepath(m, file_name, key);
-
-                // cache the lookup result
-                m->cache->insert(pair<string,wstring*>(key, res));
-                if (res) {
-                    // we have a file: stop and return
-                    if (_config->_key_cache_ttl_sec) _key_cache->put(file_name, res);
-                    return res;
-                }
-            }
-            */
-        }
-        else {
-            // no cache: SLOW! ONLY use for troubleshooting
-            wstring *res = module_get_filepath(m, file_name, key);
-            if (res) {
-                // we have a file: stop and return
-                if (_config->_key_cache_ttl_sec) _key_cache->put(file_name, res);
-                return res;
-            }
+        res = module_get_filepath(m, file_name, key);
+        if (res) {
+            return res;
         }
     }
-    if (_config->_key_cache_ttl_sec) _key_cache->put(file_name, NULL);
     return NULL;
 }
 
@@ -3140,6 +3065,29 @@ inline char *get_tailname(char *filename)
     return filename;
 }
 
+bool have_cached(const char *file_name, wchar_t **res)
+{
+    if (_config->_key_cache_ttl_sec) {
+        if (_small_key_cache->lookup(file_name, (void**)res)) {
+            // first level cache (small)
+            return true;
+        }
+        //if (_key_cache->lookup(file_name, (void**)res)) {
+        //    // key-cache: for performance
+        //    return true;
+        //}
+    }
+    return false;
+}
+
+void cache_it(const char *file_name, wchar_t *res)
+{
+    if (_config->_key_cache_ttl_sec) {
+        //_key_cache->put(file_name, res);
+        _small_key_cache->put(file_name, res);
+    }
+}
+
 void sider_get_size(char *filename, struct FILE_INFO *fi)
 {
     char *fname = get_tailname(filename);
@@ -3149,13 +3097,16 @@ void sider_get_size(char *filename, struct FILE_INFO *fi)
     }
     DBG(4) logu_("get_size:: tailname: %s\n", fname);
 
-    wstring *fn(NULL);
-    if (_config->_lua_enabled && _rewrite_count > 0) do_rewrite(fname);
-    fn = (_config->_lua_enabled) ? have_content(fname) : NULL;
-    fn = (fn) ? fn : have_live_file(fname);
+    wchar_t *fn(NULL);
+    { PERF_TIMER(_fileops_stats); if (!have_cached(fname, &fn)) {
+        if (_config->_lua_enabled && _rewrite_count > 0) do_rewrite(fname);
+        fn = (_config->_lua_enabled) ? have_content(fname) : NULL;
+        fn = (fn) ? fn : have_live_file(fname);
+        cache_it(fname, fn);
+    }}
     if (fn != NULL) {
-        DBG(4) log_(L"get_size:: livecpk file found: %s\n", fn->c_str());
-        HANDLE handle = CreateFileW(fn->c_str(),  // file to open
+        DBG(4) log_(L"get_size:: livecpk file found: %s\n", fn);
+        HANDLE handle = CreateFileW(fn,  // file to open
                            GENERIC_READ,          // open for reading
                            FILE_SHARE_READ,       // share for reading
                            NULL,                  // default security
@@ -4262,25 +4213,27 @@ BOOL sider_read_file(
     HANDLE orgHandle = hFile;
     DWORD orgBytesToRead = nNumberOfBytesToRead;
     HANDLE handle = INVALID_HANDLE_VALUE;
-    wstring *filename = NULL;
     FILE_LOAD_INFO *fli;
 
     //log_(L"rs (R12) = %p\n", rs);
     if (rs && !IsBadReadPtr(rs, sizeof(struct READ_STRUCT))) {
-        if (_config->_lua_enabled && _rewrite_count > 0) do_rewrite(rs->filename);
-        DBG(1) logu_("read_file:: rs->filesize: %llx, rs->offset: %llx, rs->filename: %s\n",
-            rs->filesize, rs->offset.full, rs->filename);
-
         BYTE* p = (BYTE*)rs;
         fli = (FILE_LOAD_INFO *)p;
         //DBG(3) logu_("read_file:: fli = %p\n", fli);
 
-        wstring *fn;
-        fn = (_config->_lua_enabled) ? have_content(rs->filename) : NULL;
-        fn = (fn) ? fn : have_live_file(rs->filename);
+        wchar_t *fn;
+        { PERF_TIMER(_fileops_stats); if (!have_cached(rs->filename, &fn)) {
+            if (_config->_lua_enabled && _rewrite_count > 0) do_rewrite(rs->filename);
+            DBG(1) logu_("read_file:: rs->filesize: %llx, rs->offset: %llx, rs->filename: %s\n",
+                rs->filesize, rs->offset.full, rs->filename);
+
+            fn = (_config->_lua_enabled) ? have_content(rs->filename) : NULL;
+            fn = (fn) ? fn : have_live_file(rs->filename);
+            cache_it(rs->filename, fn);
+        }}
         if (fn != NULL) {
-            DBG(3) log_(L"read_file:: livecpk file found: %s\n", fn->c_str());
-            handle = CreateFileW(fn->c_str(),         // file to open
+            DBG(3) log_(L"read_file:: livecpk file found: %s\n", fn);
+            handle = CreateFileW(fn,         // file to open
                                GENERIC_READ,          // open for reading
                                FILE_SHARE_READ,       // share for reading
                                NULL,                  // default security
@@ -4393,20 +4346,23 @@ void sider_mem_copy(BYTE *dst, LONGLONG dst_len, BYTE *src, LONGLONG src_len, BY
 
     struct READ_STRUCT *rs = (struct READ_STRUCT*)*(rsp+0xf);
     if (rs) {
-        if (_config->_lua_enabled && _rewrite_count > 0) do_rewrite(rs->filename);
-        DBG(1) logu_("mem_copy:: rs->filesize: %llx, rs->offset: %llx, rs->filename: %s\n",
-            rs->filesize, rs->offset.full, rs->filename);
-
         BYTE* p = (BYTE*)rs;
         FILE_LOAD_INFO *fli = (FILE_LOAD_INFO *)p;
         //DBG(3) logu_("mem_copy:: fli = %p\n", fli);
 
-        wstring *fn(NULL);
-        fn = (_config->_lua_enabled) ? have_content(rs->filename) : NULL;
-        fn = (fn) ? fn : have_live_file(rs->filename);
+        wchar_t *fn(NULL);
+        { PERF_TIMER(_fileops_stats); if (!have_cached(rs->filename, &fn)) {
+            if (_config->_lua_enabled && _rewrite_count > 0) do_rewrite(rs->filename);
+            DBG(1) logu_("mem_copy:: rs->filesize: %llx, rs->offset: %llx, rs->filename: %s\n",
+                rs->filesize, rs->offset.full, rs->filename);
+
+            fn = (_config->_lua_enabled) ? have_content(rs->filename) : NULL;
+            fn = (fn) ? fn : have_live_file(rs->filename);
+            cache_it(rs->filename, fn);
+        }}
         if (fn != NULL) {
-            DBG(3) log_(L"mem_copy:: livecpk file found: %s\n", fn->c_str());
-            handle = CreateFileW(fn->c_str(),         // file to open
+            DBG(3) log_(L"mem_copy:: livecpk file found: %s\n", fn);
+            handle = CreateFileW(fn,         // file to open
                                GENERIC_READ,          // open for reading
                                FILE_SHARE_READ,       // share for reading
                                NULL,                  // default security
@@ -4488,15 +4444,18 @@ void sider_lookup_file(LONGLONG p1, LONGLONG p2, char *filename)
     }
     //DBG(8) logu_("lookup_file:: looking for: %s\n", filename);
 
-    wstring *fn(NULL);
-    if (_config->_lua_enabled && _rewrite_count > 0) {
-        if (do_rewrite(filename)) {
-            len = strlen(filename);
-            p = filename + len + 1;
+    wchar_t *fn(NULL);
+    { PERF_TIMER(_fileops_stats); if (!have_cached(filename, &fn)) {
+        if (_config->_lua_enabled && _rewrite_count > 0) {
+            if (do_rewrite(filename)) {
+                len = strlen(filename);
+                p = filename + len + 1;
+            }
         }
-    }
-    fn = (_config->_lua_enabled) ? have_content(filename) : NULL;
-    fn = (fn) ? fn : have_live_file(filename);
+        fn = (_config->_lua_enabled) ? have_content(filename) : NULL;
+        fn = (fn) ? fn : have_live_file(filename);
+        cache_it(filename, fn);
+    }}
     if (fn) {
         DBG(4) logu_("lookup_file:: found livecpk file for: %s\n", filename);
 
@@ -5969,7 +5928,7 @@ void init_lua_support()
             memset(m, 0, sizeof(module_t));
             m->filename = new wstring(it->c_str());
             m->last_modified = last_mod_time;
-            m->cache = new lookup_cache_t(_config->_cache_size);
+            //m->cache = new lookup_cache_t(_config->_cache_size);
             m->L = luaL_newstate();
             _curr_m = m;
 
@@ -6120,7 +6079,7 @@ void lua_reload_modified_modules()
         memset(newm, 0, sizeof(module_t));
         newm->filename = new wstring(m->filename->c_str());
         newm->last_modified = last_mod_time;
-        newm->cache = new lookup_cache_t(_config->_cache_size);
+        //newm->cache = new lookup_cache_t(_config->_cache_size);
         newm->L = luaL_newstate();
         _curr_m = newm;
 
@@ -6136,7 +6095,7 @@ void lua_reload_modified_modules()
 
             // clean up
             lua_close(newm->L);
-            delete newm->cache;
+            //delete newm->cache;
             delete newm;
         }
         else {
@@ -6206,14 +6165,17 @@ DWORD install_func(LPVOID thread_param) {
     _file_to_lookup_size = strlen(_file_to_lookup) + 1 + 4 + 1;
 
     InitializeCriticalSection(&_cs);
-    _key_cache = new cache2_t(_config->_cache_size, _config->_key_cache_ttl_sec);
-    _rewrite_cache = new cache2_t(_config->_cache_size, _config->_rewrite_cache_ttl_sec);
+    //_key_cache = new cache_t(_config->_key_cache_ttl_sec);
+    _small_key_cache = new cache2_t(_config->_cache_size, _config->_key_cache_ttl_sec);
+
+    //_rewrite_cache = new cache2_t(_config->_cache_size, _config->_rewrite_cache_ttl_sec);
 #ifdef PERF_TESTING
     _stats = new stats_t(L"have_live");
     _content_stats = new stats_t(L"have_content");
+    _fileops_stats = new stats_t(L"fileops");
 #endif
 
-    _lookup_cache = new lookup_cache_t(_config->_cache_size);
+    //_lookup_cache = new lookup_cache_t(_config->_cache_size);
 
     InitializeCriticalSection(&_tcs);
     _trophy_table_copy_count = 0;
@@ -6973,15 +6935,33 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 if (L) { lua_close(L); }
                 log_(L"trophy-table copy count: %lld\n", _trophy_table_copy_count);
 
-                if (_lookup_cache) {
-                    log_(L"lookup_cache:: size = %d\n", _lookup_cache->size());
-                    delete _lookup_cache;
-                }
+                //if (_lookup_cache) {
+                //    log_(L"lookup_cache:: size = %d\n", _lookup_cache->size());
+                //    delete _lookup_cache;
+                //}
 
-                if (_key_cache) { delete _key_cache; }
-                if (_rewrite_cache) { delete _rewrite_cache; }
+                //if (_key_cache) { delete _key_cache; }
+                if (_small_key_cache) { delete _small_key_cache; }
+                //if (_rewrite_cache) { delete _rewrite_cache; }
+
+#ifdef PERF_TESTING
+                double fileops_tc = _fileops_stats->_total_count;
+                double miss_tc = _stats->_total_count + _content_stats->_total_count;
+
+                uint64_t tps = 0;
+                QueryPerformanceFrequency((LARGE_INTEGER*)&tps);
+                log_(L"ticks per second: %llu\n", tps);
+
                 if (_stats) { delete _stats; }
                 if (_content_stats) { delete _content_stats; }
+                if (_fileops_stats) { delete _fileops_stats; }
+
+                // report hit pc
+                if (fileops_tc > 1.0) {
+                    double hit_pct = 100*(1.0 - miss_tc / fileops_tc);
+                    log_(L"cache hit pct: %0.1f%%\n", hit_pct);
+                }
+#endif
 
                 // tell sider.exe to close
                 if (_config->_close_sider_on_exit || !_config->_start_game.empty()) {
