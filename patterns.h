@@ -253,18 +253,16 @@ static int offs_sider = 0;
 0000000155BBBAD3 | 48 63 C1                           | movsxd rax,ecx                         |
 0000000155BBBAD6 | 8B 44 C4 04                        | mov eax,dword ptr ss:[rsp+rax*8+4]     |
 0000000155BBBADA | 48 8B 8D 40 09 00 00               | mov rcx,qword ptr ss:[rbp+940]         |
-0000000155BBBAE1 | 48 31 E1                           | xor rcx,rsp                            |
 ...
 0000000155BBBAE9 | 4C 8D 9C 24 50 0A 00 00            | lea r11,qword ptr ss:[rsp+A50]         |
 0000000155BBBAF1 | 49 8B 5B 30                        | mov rbx,qword ptr ds:[r11+30]          |
 0000000155BBBAF5 | 49 8B 73 38                        | mov rsi,qword ptr ds:[r11+38]          |
 0000000155BBBAF9 | 49 8B 7B 40                        | mov rdi,qword ptr ds:[r11+40]          |
 */
-static BYTE pattern_trophy_table[18] =
+static BYTE pattern_trophy_table[15] =
     "\x48\x63\xc1"
     "\x8b\x44\xc4\x04"
-    "\x48\x8b\x8d\x40\x09\x00\x00"
-    "\x48\x31\xe1";
+    "\x48\x8b\x8d\x40\x09\x00\x00";
 static int offs_trophy_table = 30;
 
 // ball name

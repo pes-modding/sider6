@@ -1,7 +1,7 @@
 Sider 6 for Pro Evolution Soccer 2020
 =====================================
 Copyright (C) 2018-2019 juce
-Version 6.2.0
+Version 6.2.1
 
 
 
@@ -25,10 +25,25 @@ See scripting.txt - for detailed documentation on that.
 HOW TO USE:
 -----------
 
-Run sider.exe, it will open a small window, which you can
+The new "one-click" way is enabled by default now and it is super easy:
+just run sider.exe, it will open a small window, then it will automatically
+launch the game itself, then sider.exe will exit, but the game will
+continue running with the sider.dll loaded into it.
+
+(The very first time, or after exe update, there will be a small delay
+between the launch of sider and the game starting, as sider needs to
+analyze the process and find hook places in memory, but all subsequent
+starts should be fast)
+
+
+The "old" way is still supported too and if you prefer that, the
+sequence is the same as before. Make sure you comment out the
+"start.game" line in sider.ini, and then:
+
+1) Run sider.exe, it will open a small window, which you can
 minimize if you want, but do not close it.
 
-Run the game.
+2) Run the game.
 Sider should automatically attach to the game process.
 
 If you don't see the effects of Sider in the game, check the

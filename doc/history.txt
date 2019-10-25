@@ -2,6 +2,13 @@ Sider 6 Release History
 =======================
 
 
+October 25, 2019
+v6.2.1
+- support for 1.02.00 game exe
+- small fix for "memory.search" function
+- caching logic simplified
+
+
 October 4, 2019 "Sputnik" release
 v6.2.0
 - support for kit manipulation (via "kits" table in context)

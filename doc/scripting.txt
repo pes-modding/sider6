@@ -1,7 +1,7 @@
 Sider 6 Lua Module Programmers Guide
 ======================================
-For sider.dll version: 6.2.0 "Sputnik"
-October 4, 2019
+For sider.dll version: 6.2.1
+October 25, 2019
 
 
 
