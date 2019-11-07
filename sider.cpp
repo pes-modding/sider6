@@ -6263,7 +6263,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 31
+#define NUM_PATTERNS 32
     BYTE *frag[NUM_PATTERNS];
     frag[0] = lcpk_pattern_at_read_file;
     frag[1] = lcpk_pattern_at_get_size;
@@ -6296,6 +6296,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[28] = pattern_call_to_move;
     frag[29] = lcpk_pattern2_at_mem_copy;
     frag[30] = lcpk_pattern2_at_lookup_file;
+    frag[31] = lcpk_pattern2_at_write_cpk_filesize;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[0] = 23;
@@ -6304,6 +6305,7 @@ DWORD install_func(LPVOID thread_param) {
     _variations[23] = 0;
     _variations[29] = 3;
     _variations[30] = 4;
+    _variations[31] = 2;
 
     size_t frag_len[NUM_PATTERNS];
     frag_len[0] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_read_file)-1 : 0;
@@ -6337,6 +6339,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[28] = _config->_lua_enabled ? sizeof(pattern_call_to_move)-1 : 0;
     frag_len[29] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_mem_copy)-1 : 0;
     frag_len[30] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_lookup_file)-1 : 0;
+    frag_len[31] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_write_cpk_filesize)-1 : 0;
 
     int offs[NUM_PATTERNS];
     offs[0] = lcpk_offs_at_read_file;
@@ -6370,6 +6373,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[28] = offs_call_to_move;
     offs[29] = lcpk_offs_at_mem_copy;
     offs[30] = lcpk_offs_at_lookup_file;
+    offs[31] = lcpk_offs_at_write_cpk_filesize;
 
     BYTE **addrs[NUM_PATTERNS];
     addrs[0] = &_config->_hp_at_read_file;
@@ -6403,6 +6407,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[28] = &_config->_hp_at_call_to_move;
     addrs[29] = &_config->_hp_at_mem_copy;
     addrs[30] = &_config->_hp_at_lookup_file;
+    addrs[31] = &_config->_hp_at_extend_cpk;
 
     // check hook cache first
     for (int i=0;; i++) {

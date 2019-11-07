@@ -40,12 +40,30 @@ static BYTE lcpk_pattern_at_get_size[18] =
     "\x89\x03";
 static int lcpk_offs_at_get_size = 17;
 
+/*
+0000000151794085 | 48 8B 44 24 48                     | mov rax,qword ptr ss:[rsp+48]          |
+000000015179408A | 48 89 47 08                        | mov qword ptr ds:[rdi+8],rax           |
+000000015179408E | 33 C0                              | xor eax,eax                            |
+0000000151794090 | 49 89 7D 00                        | mov qword ptr ds:[r13],rdi             |
+*/
 static BYTE lcpk_pattern_at_write_cpk_filesize[16] =
     "\x48\x8b\x44\x24\x48"
     "\x48\x89\x47\x08"
     "\x33\xc0"
     "\x49\x89\x7d\x00";
 static int lcpk_offs_at_write_cpk_filesize = 0;
+
+/*
+0000000151794085 | 48 8B 44 24 48                     | mov rax,qword ptr ss:[rsp+48]          |
+000000015179408A | 48 89 47 08                        | mov qword ptr ds:[rdi+8],rax           |
+000000015179408E | 31 C0                              | xor eax,eax                            |
+0000000151794090 | 49 89 7D 00                        | mov qword ptr ds:[r13],rdi             |
+*/
+static BYTE lcpk_pattern2_at_write_cpk_filesize[16] =
+    "\x48\x8b\x44\x24\x48"
+    "\x48\x89\x47\x08"
+    "\x31\xc0"
+    "\x49\x89\x7d\x00";
 
 /*
 000000014FA7839A | 4C 8B 01                           | mov r8,qword ptr ds:[rcx]              |
