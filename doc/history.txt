@@ -2,6 +2,11 @@ Sider 6 Release History
 =======================
 
 
+November 29, 2019
+v6.2.3
+- support for 1.02.02 game exe
+
+
 November 6, 2019
 v6.2.2
 - support for 1.02.01 game exe
