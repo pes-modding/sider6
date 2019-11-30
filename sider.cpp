@@ -6263,151 +6263,159 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 32
-    BYTE *frag[NUM_PATTERNS];
-    frag[0] = lcpk_pattern_at_read_file;
-    frag[1] = lcpk_pattern_at_get_size;
-    frag[2] = lcpk_pattern_at_write_cpk_filesize;
-    frag[3] = lcpk_pattern_at_mem_copy;
-    frag[4] = lcpk_pattern_at_lookup_file;
-    frag[5] = pattern_set_team_id;
-    frag[6] = pattern_set_settings;
-    frag[7] = pattern_trophy_check;
-    frag[8] = pattern_context_reset;
-    frag[9] = pattern_set_min_time;
-    frag[10] = pattern_set_max_time;
-    frag[11] = pattern_set_minutes;
-    frag[12] = pattern_sider;
-    frag[13] = pattern_trophy_table;
-    frag[14] = pattern_ball_name;
-    frag[15] = pattern_dxgi;
-    frag[16] = pattern_set_stadium_choice;
-    frag[17] = pattern_stadium_name;
-    frag[18] = pattern_def_stadium_name;
-    frag[19] = pattern2_set_settings;
-    frag[20] = pattern_check_kit_choice;
-    frag[21] = pattern_get_uniparam;
-    frag[22] = pattern_data_ready;
-    frag[23] = lcpk_pattern2_at_read_file;
-    frag[24] = pattern_kit_status;
-    frag[25] = pattern_set_team_for_kits;
-    frag[26] = pattern_clear_team_for_kits;
-    frag[27] = pattern_uniparam_loaded;
-    frag[28] = pattern_call_to_move;
-    frag[29] = lcpk_pattern2_at_mem_copy;
-    frag[30] = lcpk_pattern2_at_lookup_file;
-    frag[31] = lcpk_pattern2_at_write_cpk_filesize;
+#define NUM_PATTERNS 33
+    BYTE *frag[NUM_PATTERNS+1];
+    frag[1] = lcpk_pattern_at_read_file;
+    frag[2] = lcpk_pattern_at_get_size;
+    frag[3] = lcpk_pattern_at_write_cpk_filesize;
+    frag[4] = lcpk_pattern_at_mem_copy;
+    frag[5] = lcpk_pattern_at_lookup_file;
+    frag[6] = pattern_set_team_id;
+    frag[7] = pattern_set_settings;
+    frag[8] = pattern_trophy_check;
+    frag[9] = pattern_context_reset;
+    frag[10] = pattern_set_min_time;
+    frag[11] = pattern_set_max_time;
+    frag[12] = pattern_set_minutes;
+    frag[13] = pattern_sider;
+    frag[14] = pattern_trophy_table;
+    frag[15] = pattern_ball_name;
+    frag[16] = pattern_dxgi;
+    frag[17] = pattern_set_stadium_choice;
+    frag[18] = pattern_stadium_name;
+    frag[19] = pattern_def_stadium_name;
+    frag[20] = pattern2_set_settings;
+    frag[21] = pattern_check_kit_choice;
+    frag[22] = pattern_get_uniparam;
+    frag[23] = pattern_data_ready;
+    frag[24] = lcpk_pattern2_at_read_file;
+    frag[25] = pattern_kit_status;
+    frag[26] = pattern_set_team_for_kits;
+    frag[27] = pattern_clear_team_for_kits;
+    frag[28] = pattern_uniparam_loaded;
+    frag[29] = pattern_call_to_move;
+    frag[30] = lcpk_pattern2_at_mem_copy;
+    frag[31] = lcpk_pattern2_at_lookup_file;
+    frag[32] = lcpk_pattern2_at_write_cpk_filesize;
+    frag[33] = lcpk_pattern3_at_read_file;
 
     memset(_variations, 0xff, sizeof(_variations));
-    _variations[0] = 23;
-    _variations[6] = 19;
-    _variations[19] = 6;
-    _variations[23] = 0;
-    _variations[29] = 3;
+    _variations[1] = 24;
+    _variations[3] = 32;
+    _variations[4] = 30;
+    _variations[5] = 31;
+    _variations[7] = 20;
+    _variations[20] = 7;
+    _variations[24] = 1;
     _variations[30] = 4;
-    _variations[31] = 2;
+    _variations[31] = 5;
+    _variations[32] = 3;
+    _variations[33] = 1;
 
-    size_t frag_len[NUM_PATTERNS];
-    frag_len[0] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_read_file)-1 : 0;
-    frag_len[1] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_get_size)-1 : 0;
-    frag_len[2] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_write_cpk_filesize)-1 : 0;
-    frag_len[3] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_mem_copy)-1 : 0;
-    frag_len[4] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_lookup_file)-1 : 0;
-    frag_len[5] = _config->_lua_enabled ? sizeof(pattern_set_team_id)-1 : 0;
-    frag_len[6] = _config->_lua_enabled ? sizeof(pattern_set_settings)-1 : 0;
-    frag_len[7] = _config->_lua_enabled ? sizeof(pattern_trophy_check)-1 : 0;
-    frag_len[8] = _config->_lua_enabled ? sizeof(pattern_context_reset)-1 : 0;
-    frag_len[9] = 0; //sizeof(pattern_set_min_time)-1;
-    frag_len[10] = sizeof(pattern_set_max_time)-1;
-    frag_len[11] = (_config->_num_minutes > 0) ? sizeof(pattern_set_minutes)-1 : 0;
-    frag_len[12] = _config->_free_side_select ? sizeof(pattern_sider)-1 : 0;
-    frag_len[13] = _config->_lua_enabled ? sizeof(pattern_trophy_table)-1 : 0;
-    frag_len[14] = _config->_lua_enabled ? sizeof(pattern_ball_name)-1 : 0;
-    frag_len[15] = _config->_overlay_enabled ? sizeof(pattern_dxgi)-1 : 0;
-    frag_len[16] = _config->_lua_enabled ? sizeof(pattern_set_stadium_choice)-1 : 0;
-    frag_len[17] = _config->_lua_enabled ? sizeof(pattern_stadium_name)-1 : 0;
-    frag_len[18] = _config->_lua_enabled ? sizeof(pattern_def_stadium_name)-1 : 0;
-    frag_len[19] = _config->_lua_enabled ? sizeof(pattern2_set_settings)-1 : 0;
-    frag_len[20] = _config->_lua_enabled ? sizeof(pattern_check_kit_choice)-1 : 0;
-    frag_len[21] = _config->_lua_enabled ? sizeof(pattern_get_uniparam)-1 : 0;
-    frag_len[22] = _config->_lua_enabled ? sizeof(pattern_data_ready)-1 : 0;
-    frag_len[23] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_read_file)-1 : 0;
-    frag_len[24] = _config->_lua_enabled ? sizeof(pattern_kit_status)-1 : 0;
-    frag_len[25] = _config->_lua_enabled ? sizeof(pattern_set_team_for_kits)-1 : 0;
-    frag_len[26] = _config->_lua_enabled ? sizeof(pattern_clear_team_for_kits)-1 : 0;
-    frag_len[27] = _config->_lua_enabled ? sizeof(pattern_uniparam_loaded)-1 : 0;
-    frag_len[28] = _config->_lua_enabled ? sizeof(pattern_call_to_move)-1 : 0;
-    frag_len[29] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_mem_copy)-1 : 0;
-    frag_len[30] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_lookup_file)-1 : 0;
-    frag_len[31] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_write_cpk_filesize)-1 : 0;
+    size_t frag_len[NUM_PATTERNS+1];
+    frag_len[1] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_read_file)-1 : 0;
+    frag_len[2] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_get_size)-1 : 0;
+    frag_len[3] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_write_cpk_filesize)-1 : 0;
+    frag_len[4] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_mem_copy)-1 : 0;
+    frag_len[5] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_lookup_file)-1 : 0;
+    frag_len[6] = _config->_lua_enabled ? sizeof(pattern_set_team_id)-1 : 0;
+    frag_len[7] = _config->_lua_enabled ? sizeof(pattern_set_settings)-1 : 0;
+    frag_len[8] = _config->_lua_enabled ? sizeof(pattern_trophy_check)-1 : 0;
+    frag_len[9] = _config->_lua_enabled ? sizeof(pattern_context_reset)-1 : 0;
+    frag_len[10] = 0; //sizeof(pattern_set_min_time)-1;
+    frag_len[11] = sizeof(pattern_set_max_time)-1;
+    frag_len[12] = (_config->_num_minutes > 0) ? sizeof(pattern_set_minutes)-1 : 0;
+    frag_len[13] = _config->_free_side_select ? sizeof(pattern_sider)-1 : 0;
+    frag_len[14] = _config->_lua_enabled ? sizeof(pattern_trophy_table)-1 : 0;
+    frag_len[15] = _config->_lua_enabled ? sizeof(pattern_ball_name)-1 : 0;
+    frag_len[16] = _config->_overlay_enabled ? sizeof(pattern_dxgi)-1 : 0;
+    frag_len[17] = _config->_lua_enabled ? sizeof(pattern_set_stadium_choice)-1 : 0;
+    frag_len[18] = _config->_lua_enabled ? sizeof(pattern_stadium_name)-1 : 0;
+    frag_len[19] = _config->_lua_enabled ? sizeof(pattern_def_stadium_name)-1 : 0;
+    frag_len[20] = _config->_lua_enabled ? sizeof(pattern2_set_settings)-1 : 0;
+    frag_len[21] = _config->_lua_enabled ? sizeof(pattern_check_kit_choice)-1 : 0;
+    frag_len[22] = _config->_lua_enabled ? sizeof(pattern_get_uniparam)-1 : 0;
+    frag_len[23] = _config->_lua_enabled ? sizeof(pattern_data_ready)-1 : 0;
+    frag_len[24] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_read_file)-1 : 0;
+    frag_len[25] = _config->_lua_enabled ? sizeof(pattern_kit_status)-1 : 0;
+    frag_len[26] = _config->_lua_enabled ? sizeof(pattern_set_team_for_kits)-1 : 0;
+    frag_len[27] = _config->_lua_enabled ? sizeof(pattern_clear_team_for_kits)-1 : 0;
+    frag_len[28] = _config->_lua_enabled ? sizeof(pattern_uniparam_loaded)-1 : 0;
+    frag_len[29] = _config->_lua_enabled ? sizeof(pattern_call_to_move)-1 : 0;
+    frag_len[30] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_mem_copy)-1 : 0;
+    frag_len[31] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_lookup_file)-1 : 0;
+    frag_len[32] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_write_cpk_filesize)-1 : 0;
+    frag_len[33] = _config->_livecpk_enabled ? sizeof(lcpk_pattern3_at_read_file)-1 : 0;
 
-    int offs[NUM_PATTERNS];
-    offs[0] = lcpk_offs_at_read_file;
-    offs[1] = lcpk_offs_at_get_size;
-    offs[2] = lcpk_offs_at_write_cpk_filesize;
-    offs[3] = lcpk_offs_at_mem_copy;
-    offs[4] = lcpk_offs_at_lookup_file;
-    offs[5] = offs_set_team_id;
-    offs[6] = offs_set_settings;
-    offs[7] = offs_trophy_check;
-    offs[8] = offs_context_reset;
-    offs[9] = offs_set_min_time;
-    offs[10] = offs_set_max_time;
-    offs[11] = offs_set_minutes;
-    offs[12] = offs_sider;
-    offs[13] = offs_trophy_table;
-    offs[14] = offs_ball_name;
-    offs[15] = offs_dxgi;
-    offs[16] = offs_set_stadium_choice;
-    offs[17] = offs_stadium_name;
-    offs[18] = offs_def_stadium_name;
-    offs[19] = offs_set_settings;
-    offs[20] = offs_check_kit_choice;
-    offs[21] = offs_get_uniparam;
-    offs[22] = offs_data_ready;
-    offs[23] = lcpk_offs2_at_read_file;
-    offs[24] = offs_kit_status;
-    offs[25] = offs_set_team_for_kits;
-    offs[26] = offs_clear_team_for_kits;
-    offs[27] = offs_uniparam_loaded;
-    offs[28] = offs_call_to_move;
-    offs[29] = lcpk_offs_at_mem_copy;
-    offs[30] = lcpk_offs_at_lookup_file;
-    offs[31] = lcpk_offs_at_write_cpk_filesize;
+    int offs[NUM_PATTERNS+1];
+    offs[1] = lcpk_offs_at_read_file;
+    offs[2] = lcpk_offs_at_get_size;
+    offs[3] = lcpk_offs_at_write_cpk_filesize;
+    offs[4] = lcpk_offs_at_mem_copy;
+    offs[5] = lcpk_offs_at_lookup_file;
+    offs[6] = offs_set_team_id;
+    offs[7] = offs_set_settings;
+    offs[8] = offs_trophy_check;
+    offs[9] = offs_context_reset;
+    offs[10] = offs_set_min_time;
+    offs[11] = offs_set_max_time;
+    offs[12] = offs_set_minutes;
+    offs[13] = offs_sider;
+    offs[14] = offs_trophy_table;
+    offs[15] = offs_ball_name;
+    offs[16] = offs_dxgi;
+    offs[17] = offs_set_stadium_choice;
+    offs[18] = offs_stadium_name;
+    offs[19] = offs_def_stadium_name;
+    offs[20] = offs_set_settings;
+    offs[21] = offs_check_kit_choice;
+    offs[22] = offs_get_uniparam;
+    offs[23] = offs_data_ready;
+    offs[24] = lcpk_offs2_at_read_file;
+    offs[25] = offs_kit_status;
+    offs[26] = offs_set_team_for_kits;
+    offs[27] = offs_clear_team_for_kits;
+    offs[28] = offs_uniparam_loaded;
+    offs[29] = offs_call_to_move;
+    offs[30] = lcpk_offs_at_mem_copy;
+    offs[31] = lcpk_offs_at_lookup_file;
+    offs[32] = lcpk_offs_at_write_cpk_filesize;
+    offs[33] = lcpk_offs3_at_read_file;
 
-    BYTE **addrs[NUM_PATTERNS];
-    addrs[0] = &_config->_hp_at_read_file;
-    addrs[1] = &_config->_hp_at_get_size;
-    addrs[2] = &_config->_hp_at_extend_cpk;
-    addrs[3] = &_config->_hp_at_mem_copy;
-    addrs[4] = &_config->_hp_at_lookup_file;
-    addrs[5] = &_config->_hp_at_set_team_id;
-    addrs[6] = &_config->_hp_at_set_settings;
-    addrs[7] = &_config->_hp_at_trophy_check;
-    addrs[8] = &_config->_hp_at_context_reset;
-    addrs[9] = &_config->_hp_at_set_min_time;
-    addrs[10] = &_config->_hp_at_set_max_time;
-    addrs[11] = &_config->_hp_at_set_minutes;
-    addrs[12] = &_config->_hp_at_sider;
-    addrs[13] = &_config->_hp_at_trophy_table;
-    addrs[14] = &_config->_hp_at_ball_name;
-    addrs[15] = &_config->_hp_at_dxgi;
-    addrs[16] = &_config->_hp_at_set_stadium_choice;
-    addrs[17] = &_config->_hp_at_stadium_name;
-    addrs[18] = &_config->_hp_at_def_stadium_name;
-    addrs[19] = &_config->_hp_at_set_settings;
-    addrs[20] = &_config->_hp_at_check_kit_choice;
-    addrs[21] = &_config->_hp_at_get_uniparam;
-    addrs[22] = &_config->_hp_at_data_ready;
-    addrs[23] = &_config->_hp_at_read_file;
-    addrs[24] = &_config->_hp_at_kit_status;
-    addrs[25] = &_config->_hp_at_set_team_for_kits;
-    addrs[26] = &_config->_hp_at_clear_team_for_kits;
-    addrs[27] = &_config->_hp_at_uniparam_loaded;
-    addrs[28] = &_config->_hp_at_call_to_move;
-    addrs[29] = &_config->_hp_at_mem_copy;
-    addrs[30] = &_config->_hp_at_lookup_file;
-    addrs[31] = &_config->_hp_at_extend_cpk;
+    BYTE **addrs[NUM_PATTERNS+1];
+    addrs[1] = &_config->_hp_at_read_file;
+    addrs[2] = &_config->_hp_at_get_size;
+    addrs[3] = &_config->_hp_at_extend_cpk;
+    addrs[4] = &_config->_hp_at_mem_copy;
+    addrs[5] = &_config->_hp_at_lookup_file;
+    addrs[6] = &_config->_hp_at_set_team_id;
+    addrs[7] = &_config->_hp_at_set_settings;
+    addrs[8] = &_config->_hp_at_trophy_check;
+    addrs[9] = &_config->_hp_at_context_reset;
+    addrs[10] = &_config->_hp_at_set_min_time;
+    addrs[11] = &_config->_hp_at_set_max_time;
+    addrs[12] = &_config->_hp_at_set_minutes;
+    addrs[13] = &_config->_hp_at_sider;
+    addrs[14] = &_config->_hp_at_trophy_table;
+    addrs[15] = &_config->_hp_at_ball_name;
+    addrs[16] = &_config->_hp_at_dxgi;
+    addrs[17] = &_config->_hp_at_set_stadium_choice;
+    addrs[18] = &_config->_hp_at_stadium_name;
+    addrs[19] = &_config->_hp_at_def_stadium_name;
+    addrs[20] = &_config->_hp_at_set_settings;
+    addrs[21] = &_config->_hp_at_check_kit_choice;
+    addrs[22] = &_config->_hp_at_get_uniparam;
+    addrs[23] = &_config->_hp_at_data_ready;
+    addrs[24] = &_config->_hp_at_read_file;
+    addrs[25] = &_config->_hp_at_kit_status;
+    addrs[26] = &_config->_hp_at_set_team_for_kits;
+    addrs[27] = &_config->_hp_at_clear_team_for_kits;
+    addrs[28] = &_config->_hp_at_uniparam_loaded;
+    addrs[29] = &_config->_hp_at_call_to_move;
+    addrs[30] = &_config->_hp_at_mem_copy;
+    addrs[31] = &_config->_hp_at_lookup_file;
+    addrs[32] = &_config->_hp_at_extend_cpk;
+    addrs[33] = &_config->_hp_at_read_file;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -6428,7 +6436,7 @@ DWORD install_func(LPVOID thread_param) {
             continue;
         }
 
-        for (int j=0; j<NUM_PATTERNS; j++) {
+        for (int j=1; j<NUM_PATTERNS+1; j++) {
             if (frag_len[j]==0) {
                 // empty frag
                 continue;
@@ -6443,10 +6451,10 @@ DWORD install_func(LPVOID thread_param) {
                     frag[j], frag_len[j], hint);
                 if (p) {
                     if (_variations[j]!=0xff) {
-                        log_(L"Found pattern (hint match) %i (%i) of %i\n", j+1, _variations[j]+1, NUM_PATTERNS);
+                        log_(L"Found pattern (hint match) %i (%i) of %i\n", j, _variations[j], NUM_PATTERNS);
                     }
                     else {
-                        log_(L"Found pattern (hint match) %i of %i\n", j+1, NUM_PATTERNS);
+                        log_(L"Found pattern (hint match) %i of %i\n", j, NUM_PATTERNS);
                     }
                     *(addrs[j]) = p + offs[j];
                 }
@@ -6551,7 +6559,7 @@ void _install_func(IMAGE_SECTION_HEADER *h, int npatt, BYTE **frag, size_t *frag
     log_(L"Searching range: %p : %p (size: %p)\n",
         base, base + h->Misc.VirtualSize, h->Misc.VirtualSize);
 
-    for (int j=0; j<npatt; j++) {
+    for (int j=1; j<npatt+1; j++) {
         if (frag_len[j]==0) {
             // empty frag
             continue;
@@ -6566,10 +6574,10 @@ void _install_func(IMAGE_SECTION_HEADER *h, int npatt, BYTE **frag, size_t *frag
             continue;
         }
         if (_variations[j]!=0xff) {
-            log_(L"Found pattern %i (%i) of %i\n", j+1, _variations[j]+1, NUM_PATTERNS);
+            log_(L"Found pattern %i (%i) of %i\n", j, _variations[j], NUM_PATTERNS);
         }
         else {
-            log_(L"Found pattern %i of %i\n", j+1, NUM_PATTERNS);
+            log_(L"Found pattern %i of %i\n", j, NUM_PATTERNS);
         }
         *(addrs[j]) = p + offs[j];
         hcache.set(j,p);
