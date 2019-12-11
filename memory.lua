@@ -106,10 +106,14 @@ local format_sizes = {
     i64 = 8, u64 = 8,
     i32 = 4, u32 = 4, i = 4, ui = 4,
     i16 = 2, u16 = 2, s = 2, us = 2,
+    i8 = 1, u8 = 1,
     f = 4, d = 8,
 }
 
 function m.pack(fmt, value)
+    if fmt == 'b' then
+        return value
+    end
     local len = format_sizes[fmt]
     if len == nil then
         return error(string.format('Unsupported pack format: %s', fmt))
@@ -138,12 +142,38 @@ function m.unpack(fmt, s)
         return tonumber(ffi.cast('int16_t*', s)[0])
     elseif fmt == 'u16' or fmt == 'us' then
         return tonumber(ffi.cast('uint16_t*', s)[0])
+    elseif fmt == 'i8' then
+        return tonumber(ffi.cast('int8_t*', s)[0])
+    elseif fmt == 'u8' then
+        return tonumber(ffi.cast('uint8_t*', s)[0])
     elseif fmt == 'f' then
         return tonumber(ffi.cast('float*', s)[0])
     elseif fmt == 'd' then
         return tonumber(ffi.cast('double*', s)[0])
+    elseif fmt == 'b' then
+        return s
     end
     return error(string.format('Unsupported unpack format: %s', fmt))
+end
+
+function m.guard(addr, len, fmt, def_value)
+    local first_write = true
+    local t = {}
+    t.read = function()
+        return m.unpack(fmt, m.read(addr, len))
+    end
+    t.write = function(new_value)
+        if first_write then
+            local v = m.unpack(fmt, m.read(addr, len))
+            if v ~= def_value then
+                error(string.format('PROBLEM: default value mismatch at %s. Expected: %s, Got: %s',
+                    m.hex(addr), def_value, v))
+            end
+            first_write = false
+        end
+        m.write(addr, memory.pack(fmt, new_value))
+    end
+    return t
 end
 
 function m.hex(value)
