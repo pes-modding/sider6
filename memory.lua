@@ -111,7 +111,7 @@ local format_sizes = {
 }
 
 function m.pack(fmt, value)
-    if fmt == 'b' then
+    if fmt == 'b' or fmt == 't' then
         return value
     end
     local len = format_sizes[fmt]
@@ -150,7 +150,7 @@ function m.unpack(fmt, s)
         return tonumber(ffi.cast('float*', s)[0])
     elseif fmt == 'd' then
         return tonumber(ffi.cast('double*', s)[0])
-    elseif fmt == 'b' then
+    elseif fmt == 'b' or fmt == 't' then
         return s
     end
     return error(string.format('Unsupported unpack format: %s', fmt))
@@ -166,8 +166,10 @@ function m.guard(addr, len, fmt, def_value)
         if first_write then
             local v = m.unpack(fmt, m.read(addr, len))
             if v ~= def_value then
+                local sv = fmt == 'b' and m.hex(v) or v
+                local sd = fmt == 'b' and m.hex(def_value) or def_value
                 error(string.format('PROBLEM: default value mismatch at %s. Expected: %s, Got: %s',
-                    m.hex(addr), def_value, v))
+                    m.hex(addr), sd, sv))
             end
             first_write = false
         end
