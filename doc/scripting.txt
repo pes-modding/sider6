@@ -1,7 +1,7 @@
 Sider 6 Lua Module Programmers Guide
 ======================================
-For sider.dll version: 6.2.3
-November 29, 2019
+For sider.dll version: 6.2.4
+December 19, 2019
 
 
 
@@ -725,6 +725,19 @@ This function writes the string of bytes (str) at the address (addr).
 Return value: nil
 
 
+memory.guard(addr, len, fmt, default_value)
+
+This function first checks if the address "addr" contains the value
+that matches the default_value given. (It automatically unpacks
+the byte sequence of length "len", using the format "fmt".)
+If the value checked does not match the "default_value", an error
+is raised.
+
+Otherwise, the function returns a new object (table), which has
+the "read" and "write" methods that can be used to read and
+modify the value at given address.
+
+
 memory.search(str, start_addr, end_addr)
 
 This function searches for the string of bytes (str), in the range
@@ -746,6 +759,10 @@ have one of the following values:
 "u32" : 32-bit unsigned integer,
 "i16" : 16-bit signed integer,
 "u16" : 16-bit unsigned integer
+"i8"  : 8-bit signed integer [-127,127]
+"u8"  : 8-bit unsigned integer [0,255]
+"b"   : string of bytes
+"t"   : text string
 Return value: string of bytes, representing the number in the format
 specified by the "format" parameter
 

@@ -21,7 +21,7 @@ BEGIN
 			VALUE "FileVersion", "6.2.4.1\0"
 			VALUE "LegalCopyright", "Copyright © 2014-2019 Juce\0"
 			VALUE "Comments", "Sider.\r\n\
-Companion program for Pro Evolution Soccer 2019.\0"
+Companion program for Pro Evolution Soccer 2020.\0"
 		END
 	END
 	BLOCK "VarFileInfo"
