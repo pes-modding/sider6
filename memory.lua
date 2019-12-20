@@ -157,23 +157,30 @@ function m.unpack(fmt, s)
 end
 
 function m.guard(addr, len, fmt, def_value)
-    local first_write = true
+    local v = m.unpack(fmt, m.read(addr, len))
+    local same = v == def_value
+    if not same then
+        -- handle limited precision of floats and doubles
+        local str_v = tostring(v)
+        local str_d = tostring(def_value)
+        if fmt == 'f' then
+            same = str_v:sub(1,8) == str_d:sub(1,8)
+        elseif fmt == 'd' then
+            same = str_v:sub(1,17) == str_d:sub(1,17)
+        end
+    end
+    if not same then
+        local sv = fmt == 'b' and m.hex(v) or v
+        local sd = fmt == 'b' and m.hex(def_value) or def_value
+        error(string.format('PROBLEM: default value mismatch at %s. Expected: %s, Got: %s',
+            m.hex(addr), sd, sv))
+    end
     local t = {}
     t.read = function()
         return m.unpack(fmt, m.read(addr, len))
     end
     t.write = function(new_value)
-        if first_write then
-            local v = m.unpack(fmt, m.read(addr, len))
-            if v ~= def_value then
-                local sv = fmt == 'b' and m.hex(v) or v
-                local sd = fmt == 'b' and m.hex(def_value) or def_value
-                error(string.format('PROBLEM: default value mismatch at %s. Expected: %s, Got: %s',
-                    m.hex(addr), sd, sv))
-            end
-            first_write = false
-        end
-        m.write(addr, memory.pack(fmt, new_value))
+        return m.write(addr, m.pack(fmt, new_value))
     end
     return t
 end
