@@ -370,6 +370,35 @@ static BYTE pattern_set_stadium_choice[13] =
 static int offs_set_stadium_choice = 11;
 
 /*
+0000000140AB0222 | C6 44 24 20 01                     | mov byte ptr ss:[rsp+20],1             |
+0000000140AB0227 | 41 0F B7 D7                        | movzx edx,r15w                         |
+0000000140AB022B | 48 8B CE                           | mov rcx,rsi                            |
+0000000140AB022E | E8 FD 25 6E 00                     | call pes2020.141192830                 |
+...
+0000000141192830 | E9 FB EA 81 0C                     | jmp pes2020.14D9B1330                  |
+0000000141192835 | CC                                 | int3                                   |
+0000000141192836 | CC                                 | int3                                   |
+0000000141192837 | CC                                 | int3                                   |
+0000000141192838 | CC                                 | int3                                   |
+0000000141192839 | CC                                 | int3                                   |
+000000014119283A | CC                                 | int3                                   |
+000000014119283B | CC                                 | int3                                   |
+000000014119283C | CC                                 | int3                                   |
+000000014119283D | CC                                 | int3                                   |
+000000014119283E | CC                                 | int3                                   |
+000000014119283F | CC                                 | int3                                   |
+...
+000000014D9B1330 | 66 89 51 34                        | mov word ptr ds:[rcx+34],dx            | set stadium choice
+000000014D9B1334 | C3                                 | ret                                    |
+*/
+static BYTE pattern2_set_stadium_choice[14] =
+    "\xc6\x44\x24\x20\x01"
+    "\x41\x0f\xb7\xd7"
+    "\x48\x8b\xce"
+    "\xe8";
+static int offs2_set_stadium_choice = 12;
+
+/*
 000000014CFE6503 | 80 79 08 00             | cmp byte ptr ds:[rcx+8],0              | before stadium name copy
 000000014CFE6507 | 48 8D 51 08             | lea rdx,qword ptr ds:[rcx+8]           | rdx:"Allianz Parque"
 000000014CFE650B | 75 12                   | jne pes2019.14CFE651F                  |
