@@ -3131,21 +3131,31 @@ void sider_get_size(char *filename, struct FILE_INFO *fi)
 
 void prep_stuff()
 {
-    LoadLibrary(L"d3d_compiler_46");
-	hr = FW1CreateFactory(FW1_VERSION, &g_pFW1Factory);
+/*
+    log_(L"Loading D3DCOMPILER_DLL = {%s} ...\n", D3DCOMPILER_DLL);
+    if (LoadLibrary(D3DCOMPILER_DLL)) {
+        log_(L"Loaded D3DCOMPILER_DLL = %s\n", D3DCOMPILER_DLL);
+    }
+    else {
+        log_(L"Failed to load D3DCOMPILER_DLL (%s). Error: %d\n", D3DCOMPILER_DLL, GetLastError());
+    }
+*/
+    hr = FW1CreateFactory(FW1_VERSION, &g_pFW1Factory);
     if (FAILED(hr)) {
         logu_("FW1CreateFactory failed with: %p\n", hr);
         return;
     }
+    logu_("FW1CreateFactory: %p\n", g_pFW1Factory);
 	hr = g_pFW1Factory->CreateFontWrapper(DX11.Device, L"Arial", &g_pFontWrapper);
     if (FAILED(hr)) {
         logu_("CreateFontWrapper failed with: %p\n", hr);
         return;
     }
+    logu_("FW1FontWrapper: %p\n", g_pFontWrapper);
 
     DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
-    ID3D10Blob* pBlobVS = NULL;
     ID3D10Blob* pBlobError = NULL;
+    ID3D10Blob* pBlobVS = NULL;
     hr = D3DCompile(g_strVS, lstrlenA(g_strVS) + 1, "VS", NULL, NULL, "VS",
         "vs_4_0", dwShaderFlags, 0, &pBlobVS, &pBlobError);
     if (FAILED(hr))
@@ -3182,6 +3192,14 @@ void prep_stuff()
 #include "vshader.h"
     logu_("creating vertex shader from array of %d bytes\n", sizeof(g_siderVS));
     hr = DX11.Device->CreateVertexShader(g_siderVS, sizeof(g_siderVS), NULL, &g_pVertexShader);
+    if (FAILED(hr)) {
+        logu_("DX11.Device->CreateVertexShader failed\n");
+        return;
+    }
+
+#include "vtexshader.h"
+    logu_("creating vertex shader from array of %d bytes\n", sizeof(g_siderTexVS));
+    hr = DX11.Device->CreateVertexShader(g_siderTexVS, sizeof(g_siderTexVS), NULL, &g_pTexVertexShader);
     if (FAILED(hr)) {
         logu_("DX11.Device->CreateVertexShader failed\n");
         return;
@@ -3249,6 +3267,14 @@ void prep_stuff()
         logu_("DX11.Device->CreatePixelShader failed\n");
         return;
     }
+
+#include "ptexshader.h"
+    logu_("creating pixel shader from array of %d bytes\n", sizeof(g_siderTexPS));
+    hr = DX11.Device->CreatePixelShader(g_siderTexPS, sizeof(g_siderTexPS), NULL, &g_pTexPixelShader);
+    if (FAILED(hr)) {
+        logu_("DX11.Device->CreatePixelShader failed\n");
+        return;
+    }
 */
 
     // Create the input layout
@@ -3259,6 +3285,8 @@ void prep_stuff()
     UINT numElements = _countof(elements);
     hr = DX11.Device->CreateInputLayout(elements, numElements, pBlobVS->GetBufferPointer(),
         pBlobVS->GetBufferSize(), &g_pInputLayout);
+    //hr = DX11.Device->CreateInputLayout(elements, numElements, g_siderVS,
+    //    sizeof(g_siderVS), &g_pInputLayout);
     if (FAILED(hr)) {
         logu_("DX11.Device->CreateInputLayout failed\n");
         return;
@@ -3273,6 +3301,8 @@ void prep_stuff()
     numElements = _countof(layout);
     hr = DX11.Device->CreateInputLayout(layout, numElements, pBlobTexVS->GetBufferPointer(),
         pBlobTexVS->GetBufferSize(), &g_pTexInputLayout);
+    //hr = DX11.Device->CreateInputLayout(layout, numElements, g_siderTexVS,
+    //    sizeof(g_siderTexVS), &g_pTexInputLayout);
     if (FAILED(hr)) {
         logu_("DX11.Device->CreateInputLayout failed\n");
         return;

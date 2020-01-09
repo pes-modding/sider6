@@ -15,12 +15,13 @@ EXTRA_CFLAGS=/DMYDLL_RELEASE_BUILD
 EXTRA_CFLAGS=$(EXTRA_CFLAGS) /DPERF_TESTING
 !endif
 
-LPZLIB=soft\zlib123-dll\dll_x64
-ZLIBINC=/I soft\zlib123-dll\include
+LPZLIB=soft\zlib-1.2.11
+ZLIBINC=/I soft\zlib-1.2.11
+ZLIBLIB=zlib.lib
 
 # 4731: warning about ebp modification
-CFLAGS=/nologo /Od /EHsc /wd4731 /D_WIN32_WINNT=0x601 $(EXTRA_CFLAGS)
-LFLAGS=/NOLOGO
+CFLAGS=/nologo /Od /EHsc /wd4731 /MT /D_WIN32_WINNT=0x601 $(EXTRA_CFLAGS)
+LFLAGS=/NOLOGO /DEFAULTLIB:"LIBCMT"
 LIBS=user32.lib gdi32.lib comctl32.lib version.lib ole32.lib shell32.lib
 
 #LUAINC=/I soft\LuaJIT\src
@@ -57,8 +58,11 @@ memlib_lua.h: memory.lua makememlibhdr.exe
 makememlibhdr.exe: makememlibhdr.c
 	$(CC) makememlibhdr.c
 
+$(LPZLIB)\$(ZLIBLIB):
+    cd $(LPZLIB) && nmake -f win32\Makefile.msc
+
 $(LUALIBPATH)\$(LUALIB):
-	cd $(LUALIBPATH) && msvcbuild.bat gc64
+	cd $(LUALIBPATH) && msvcbuild.bat gc64 static
 
 $(FW1LIBPATH)\$(FW1LIB):
 	cd $(FW1LIBROOT) && msbuild /p:Configuration=Release
@@ -72,27 +76,34 @@ util.obj: util.asm
 vshader.h: vshader.hlsl
 	fxc /E siderVS /Ges /T vs_4_0 /Fh vshader.h vshader.hlsl
 
+vtexshader.h: vtexshader.hlsl
+	fxc /E siderTexVS /Ges /T vs_4_0 /Fh vtexshader.h vtexshader.hlsl
+
 pshader.h: pshader.hlsl
 	fxc /E siderPS /Ges /T ps_4_0 /Fh pshader.h pshader.hlsl
 
-sider.obj: sider.cpp sider.h patterns.h common.h imageutil.h vshader.h pshader.h libz.h kitinfo.h utf8.h
-sider.dll: sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(LUALIBPATH)\$(LUALIB) $(FW1LIBPATH)\$(FW1LIB) $(LPZLIB)\zlibwapi.lib
-	$(LINK) $(LFLAGS) /out:sider.dll /DLL sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res zlibwapi.lib /LIBPATH:$(LUALIBPATH) /LIBPATH:$(FW1LIBPATH) $(LIBS) $(LUALIB) $(FW1LIB) /LIBPATH:$(LPZLIB) /LIBPATH:"$(LIB)"
+ptexshader.h: ptexshader.hlsl
+	fxc /E siderTexPS /Ges /T ps_4_0 /Fh ptexshader.h ptexshader.hlsl
+
+sider.obj: sider.cpp sider.h patterns.h common.h imageutil.h vshader.h vtexshader.h pshader.h ptexshader.h libz.h kitinfo.h utf8.h
+sider.dll: sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(LUALIBPATH)\$(LUALIB) $(FW1LIBPATH)\$(FW1LIB) $(LPZLIB)\$(ZLIBLIB)
+	$(LINK) $(LFLAGS) /out:sider.dll /DLL sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(ZLIBLIB) /LIBPATH:$(LUALIBPATH) /LIBPATH:$(FW1LIBPATH) $(LIBS) $(LUALIB) $(FW1LIB) /LIBPATH:$(LPZLIB) /LIBPATH:"$(LIB)"
 
 sider.exe: main.obj sider.dll sider_main.res $(LUADLL)
 	$(LINK) $(LFLAGS) /out:sider.exe main.obj sider_main.res $(LIBS) sider.lib /LIBPATH:"$(LIB)"
 
 $(LUADLL): $(LUALIBPATH)\$(LUALIB)
-	copy $(LUALIBPATH)\$(LUADLL) .
+#	copy $(LUALIBPATH)\$(LUADLL) .
 	copy $(LUALIBPATH)\$(LUAJIT) .
 
 .cpp.obj:
 	$(CC) $(CFLAGS) -c $(INC) $(LUAINC) $(FW1INC) $(ZLIBINC) $<
 
 clean:
-	del *.obj *.dll *.exp *.res *.lib *.exe *~ memlib_lua.h vshader.h pshader.h
+	del *.obj *.dll *.exp *.res *.lib *.exe *~ memlib_lua.h vshader.h vtexshader.h pshader.h ptexshader.h
 
 clean-all: clean
 	cd $(LUALIBPATH) && del /Q lua51.exp lua51.lib lua51.dll luajit.exe
 	cd $(FW1LIBROOT) && del /Q /S Debug Release
+	cd $(LPZLIB) && nmake -f win32\Makefile.msc clean
 

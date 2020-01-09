@@ -6,7 +6,7 @@ local C = ffi.C
 ffi.cdef [[
 bool VirtualProtect(void *p, size_t len, uint32_t newprot, uint32_t *oldprot);
 int memcmp(void *dst, void *src, size_t len);
-void sprintf(char *dst, char *fmt, ...);
+int wsprintfA(char *dst, char *fmt, ...);
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -193,7 +193,7 @@ function m.hex(value)
         return s
     elseif type(value) == 'cdata' or type(value) == 'userdata' then
         local buf = ffi.new('char[32]',{});
-        C.sprintf(buf, ffi.cast('char*', '0x%llx'), ffi.cast('uint64_t',value));
+        C.wsprintfA(buf, ffi.cast('char*', '0x%llx'), ffi.cast('uint64_t',value));
         return ffi.string(buf)
     else
         return string.format('0x%x', value)
