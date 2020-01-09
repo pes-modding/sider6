@@ -3,6 +3,7 @@ s*.exp
 s*.lib
 *.exe
 *.res
+*.pdb
 s*.dll
 lua51.dll
 lua51.exp
@@ -14,5 +15,10 @@ fileutil_lua.h
 Debug/
 Release/
 vshader.h
+vtexshader.h
 pshader.h
+ptexshader.h
 vmdef.lua
+soft/zlib-1.2.11/*.exp
+soft/zlib-1.2.11/*.lib
+soft/zlib-1.2.11/*.dll
