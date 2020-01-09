@@ -543,6 +543,21 @@ static BYTE pattern_call_to_move[10] =
 static int offs_call_to_move = 0x68-0x50;
 
 /*
+00000001553111E4 | 85 C0                              | test eax,eax                           |
+00000001553111E6 | 75 26                              | jne pes2020.15531120E                  |
+00000001553111E8 | 89 DA                              | mov edx,ebx                            |
+00000001553111EA | 48 89 F9                           | mov rcx,rdi                            |
+...
+00000001553111FC | E8 7F 0B 27 EC                     | call pes2020.141581D80                 | call to move
+*/
+static BYTE pattern2_call_to_move[10] =
+    "\x85\xc0"
+    "\x75\x26"
+    "\x89\xda"
+    "\x48\x89\xf9";
+static int offs2_call_to_move = 0xfc-0xe4;
+
+/*
 00000001505F09CC | 44 0F B6 4B 4E                     | movzx r9d,byte ptr ds:[rbx+4E]       |
 00000001505F09D1 | 44 0F B6 43 4D                     | movzx r8d,byte ptr ds:[rbx+4D]       |
 00000001505F09D6 | 0F B6 53 4C                        | movzx edx,byte ptr ds:[rbx+4C]       |

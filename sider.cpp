@@ -6263,7 +6263,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 34
+#define NUM_PATTERNS 35
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6299,6 +6299,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[32] = lcpk_pattern2_at_write_cpk_filesize;
     frag[33] = lcpk_pattern3_at_read_file;
     frag[34] = pattern2_set_stadium_choice;
+    frag[35] = pattern2_call_to_move;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -6309,11 +6310,13 @@ DWORD install_func(LPVOID thread_param) {
     _variations[17] = 34;
     _variations[20] = 7;
     _variations[24] = 1;
+    _variations[29] = 35;
     _variations[30] = 4;
     _variations[31] = 5;
     _variations[32] = 3;
     _variations[33] = 1;
     _variations[34] = 17;
+    _variations[35] = 29;
 
     size_t frag_len[NUM_PATTERNS+1];
     frag_len[1] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_read_file)-1 : 0;
@@ -6350,6 +6353,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[32] = _config->_livecpk_enabled ? sizeof(lcpk_pattern2_at_write_cpk_filesize)-1 : 0;
     frag_len[33] = _config->_livecpk_enabled ? sizeof(lcpk_pattern3_at_read_file)-1 : 0;
     frag_len[34] = _config->_lua_enabled ? sizeof(pattern2_set_stadium_choice)-1 : 0;
+    frag_len[35] = _config->_lua_enabled ? sizeof(pattern2_call_to_move)-1 : 0;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -6386,6 +6390,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[32] = lcpk_offs_at_write_cpk_filesize;
     offs[33] = lcpk_offs3_at_read_file;
     offs[34] = offs2_set_stadium_choice;
+    offs[35] = offs2_call_to_move;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -6422,6 +6427,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[32] = &_config->_hp_at_extend_cpk;
     addrs[33] = &_config->_hp_at_read_file;
     addrs[34] = &_config->_hp_at_set_stadium_choice;
+    addrs[35] = &_config->_hp_at_call_to_move;
 
     // check hook cache first
     for (int i=0;; i++) {
