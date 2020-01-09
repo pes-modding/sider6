@@ -2,6 +2,12 @@ Sider 6 Release History
 =======================
 
 
+January 9, 2020
+v6.2.5
+- support for 1.03.02 game exe
+- statically linking zlib 1.2.11
+
+
 December 19, 2019
 v6.2.4
 - support for PES 2020 Lite

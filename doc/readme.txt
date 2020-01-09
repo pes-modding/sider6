@@ -1,7 +1,7 @@
 Sider 6 for Pro Evolution Soccer 2020
 =====================================
-Copyright (C) 2018-2019 juce
-Version 6.2.4
+Copyright (C) 2018-2020 juce
+Version 6.2.5
 
 
 
