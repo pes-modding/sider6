@@ -137,6 +137,7 @@ HRESULT CFW1GlyphRenderStates::initRenderResources(
 
 // Create quad shaders
 HRESULT CFW1GlyphRenderStates::createQuadShaders() {
+/*
 	// Vertex shaders
 	const char vsSimpleStr[] =
 	"cbuffer ShaderConstants : register(b0) {\r\n"
@@ -224,15 +225,23 @@ HRESULT CFW1GlyphRenderStates::createQuadShaders() {
 		m_lastError = L"Failed to compile vertex shader";
 	}
 	else {
+*/
+    HRESULT hResult;
+    {
+#include "vsimple.h"
+#include "vclip.h"
+
 		// Create vertex shader
 		ID3D11VertexShader *pVS;
 		
-		hResult = m_pDevice->CreateVertexShader(pVSCode->GetBufferPointer(), pVSCode->GetBufferSize(), NULL, &pVS);
+		//hResult = m_pDevice->CreateVertexShader(pVSCode->GetBufferPointer(), pVSCode->GetBufferSize(), NULL, &pVS);
+		hResult = m_pDevice->CreateVertexShader(g_simpleVS, sizeof(g_simpleVS), NULL, &pVS);
 		if(FAILED(hResult)) {
 			m_lastError = L"Failed to create vertex shader";
 		}
 		else {
 			// Compile clipping vertex shader
+/*
 			ID3DBlob *pVSClipCode;
 			
 			hResult = m_pfnD3DCompile(
@@ -252,12 +261,16 @@ HRESULT CFW1GlyphRenderStates::createQuadShaders() {
 				m_lastError = L"Failed to compile clipping vertex shader";
 			}
 			else {
+*/
+            {
 				// Create vertex shader
 				ID3D11VertexShader *pVSClip;
 				
 				hResult = m_pDevice->CreateVertexShader(
-					pVSClipCode->GetBufferPointer(),
-					pVSClipCode->GetBufferSize(),
+					//pVSClipCode->GetBufferPointer(),
+					//pVSClipCode->GetBufferSize(),
+                    g_clipVS,
+                    sizeof(g_clipVS),
 					NULL,
 					&pVSClip
 				);
@@ -277,8 +290,10 @@ HRESULT CFW1GlyphRenderStates::createQuadShaders() {
 					hResult = m_pDevice->CreateInputLayout(
 						inputElements,
 						2,
-						pVSCode->GetBufferPointer(),
-						pVSCode->GetBufferSize(),
+						//pVSCode->GetBufferPointer(),
+						//pVSCode->GetBufferSize(),
+                        g_simpleVS,
+                        sizeof(g_simpleVS),
 						&pInputLayout
 					);
 					if(FAILED(hResult)) {
@@ -297,14 +312,14 @@ HRESULT CFW1GlyphRenderStates::createQuadShaders() {
 						pVSClip->Release();
 				}
 				
-				pVSClipCode->Release();
+				//pVSClipCode->Release();
 			}
 			
 			if(FAILED(hResult))
 				pVS->Release();
 		}
 		
-		pVSCode->Release();
+		//pVSCode->Release();
 	}
 	
 	return hResult;
@@ -315,6 +330,7 @@ HRESULT CFW1GlyphRenderStates::createGlyphShaders() {
 	if(m_featureLevel < D3D_FEATURE_LEVEL_10_0)
 		return E_FAIL;
 	
+/*
 	// Geometry shader constructing glyphs from point input and texture buffer
 	const char gsSimpleStr[] =
 	"cbuffer ShaderConstants : register(b0) {\r\n"
@@ -465,14 +481,23 @@ HRESULT CFW1GlyphRenderStates::createGlyphShaders() {
 		m_lastError = L"Failed to compile geometry shader";
 	}
 	else {
+*/
+    HRESULT hResult;
+    {
+#include "gsimple.h"
+#include "gclip.h"
+#include "vempty.h"
+
 		// Create geometry shader
 		ID3D11GeometryShader *pGS;
 		
-		hResult = m_pDevice->CreateGeometryShader(pGSCode->GetBufferPointer(), pGSCode->GetBufferSize(), NULL, &pGS);
+		//hResult = m_pDevice->CreateGeometryShader(pGSCode->GetBufferPointer(), pGSCode->GetBufferSize(), NULL, &pGS);
+		hResult = m_pDevice->CreateGeometryShader(g_simpleGS, sizeof(g_simpleGS), NULL, &pGS);
 		if(FAILED(hResult)) {
 			m_lastError = L"Failed to create geometry shader";
 		}
 		else {
+/*
 			// Compile clipping geometry shader
 			ID3DBlob *pGSClipCode;
 			
@@ -493,12 +518,16 @@ HRESULT CFW1GlyphRenderStates::createGlyphShaders() {
 				m_lastError = L"Failed to compile clipping geometry shader";
 			}
 			else {
+*/
+            {
 				// Create clipping geometry shader
 				ID3D11GeometryShader *pGSClip;
 				
 				hResult = m_pDevice->CreateGeometryShader(
-					pGSClipCode->GetBufferPointer(),
-					pGSClipCode->GetBufferSize(),
+					//pGSClipCode->GetBufferPointer(),
+					//pGSClipCode->GetBufferSize(),
+                    g_clipGS,
+                    sizeof(g_clipGS),
 					NULL,
 					&pGSClip
 				);
@@ -506,6 +535,7 @@ HRESULT CFW1GlyphRenderStates::createGlyphShaders() {
 					m_lastError = L"Failed to create clipping geometry shader";
 				}
 				else {
+/*
 					ID3DBlob *pVSEmptyCode;
 					
 					// Compile vertex shader
@@ -526,12 +556,16 @@ HRESULT CFW1GlyphRenderStates::createGlyphShaders() {
 						m_lastError = L"Failed to compile empty vertex shader";
 					}
 					else {
+*/
+                    {
 						// Create vertex shader
 						ID3D11VertexShader *pVSEmpty;
 						
 						hResult = m_pDevice->CreateVertexShader(
-							pVSEmptyCode->GetBufferPointer(),
-							pVSEmptyCode->GetBufferSize(),
+							//pVSEmptyCode->GetBufferPointer(),
+							//pVSEmptyCode->GetBufferSize(),
+                            g_emptyVS,
+                            sizeof(g_emptyVS),
 							NULL,
 							&pVSEmpty
 						);
@@ -550,8 +584,10 @@ HRESULT CFW1GlyphRenderStates::createGlyphShaders() {
 							hResult = m_pDevice->CreateInputLayout(
 								inputElements,
 								2,
-								pVSEmptyCode->GetBufferPointer(),
-								pVSEmptyCode->GetBufferSize(),
+								//pVSEmptyCode->GetBufferPointer(),
+								//pVSEmptyCode->GetBufferSize(),
+                                g_emptyVS,
+                                sizeof(g_emptyVS),
 								&pInputLayout
 							);
 							if(FAILED(hResult)) {
@@ -572,21 +608,21 @@ HRESULT CFW1GlyphRenderStates::createGlyphShaders() {
 								pVSEmpty->Release();
 						}
 						
-						pVSEmptyCode->Release();
+						//pVSEmptyCode->Release();
 					}
 					
 					if(FAILED(hResult))
 						pGSClip->Release();
 				}
 				
-				pGSClipCode->Release();
+				//pGSClipCode->Release();
 			}
 			
 			if(FAILED(hResult))
 				pGS->Release();
 		}
 		
-		pGSCode->Release();
+		//pGSCode->Release();
 	}
 	
 	return hResult;
@@ -594,6 +630,7 @@ HRESULT CFW1GlyphRenderStates::createGlyphShaders() {
 
 // Create pixel shaders
 HRESULT CFW1GlyphRenderStates::createPixelShaders() {
+/*
 	// Pixel shader
 	const char psStr[] =
 	"SamplerState sampler0 : register(s0);\r\n"
@@ -668,14 +705,22 @@ HRESULT CFW1GlyphRenderStates::createPixelShaders() {
 		m_lastError = L"Failed to compile pixel shader";
 	}
 	else {
+*/
+    HRESULT hResult;
+    {
+#include "psimple.h"
+#include "pclip.h"
+
 		// Create pixel shader
 		ID3D11PixelShader *pPS;
 		
-		hResult = m_pDevice->CreatePixelShader(pPSCode->GetBufferPointer(), pPSCode->GetBufferSize(), NULL, &pPS);
+		//hResult = m_pDevice->CreatePixelShader(pPSCode->GetBufferPointer(), pPSCode->GetBufferSize(), NULL, &pPS);
+		hResult = m_pDevice->CreatePixelShader(g_simplePS, sizeof(g_simplePS), NULL, &pPS);
 		if(FAILED(hResult)) {
 			m_lastError = L"Failed to create pixel shader";
 		}
 		else {
+/*
 			// Compile clipping pixel shader
 			ID3DBlob *pPSClipCode;
 			
@@ -696,12 +741,16 @@ HRESULT CFW1GlyphRenderStates::createPixelShaders() {
 				m_lastError = L"Failed to compile clipping pixel shader";
 			}
 			else {
+*/
+            {
 				// Create pixel shader
 				ID3D11PixelShader *pPSClip;
 				
 				hResult = m_pDevice->CreatePixelShader(
-					pPSClipCode->GetBufferPointer(),
-					pPSClipCode->GetBufferSize(),
+					//pPSClipCode->GetBufferPointer(),
+					//pPSClipCode->GetBufferSize(),
+                    g_clipPS,
+                    sizeof(g_clipPS),
 					NULL, &pPSClip
 				);
 				if(FAILED(hResult)) {
@@ -715,14 +764,14 @@ HRESULT CFW1GlyphRenderStates::createPixelShaders() {
 					hResult = S_OK;
 				}
 				
-				pPSClipCode->Release();
+				//pPSClipCode->Release();
 			}
 			
 			if(FAILED(hResult))
 				pPS->Release();
 		}
 		
-		pPSCode->Release();
+		//pPSCode->Release();
 	}
 	
 	return hResult;
