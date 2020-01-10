@@ -193,7 +193,7 @@ function m.hex(value)
         return s
     elseif type(value) == 'cdata' or type(value) == 'userdata' then
         local buf = ffi.new('char[32]',{});
-        C.wsprintfA(buf, ffi.cast('char*', '0x%llx'), ffi.cast('uint64_t',value));
+        C.wsprintfA(buf, ffi.cast('char*', '0x%Ix'), ffi.cast('uint64_t',value));
         return ffi.string(buf)
     else
         return string.format('0x%x', value)
