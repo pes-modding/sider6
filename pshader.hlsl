@@ -1,6 +1,10 @@
-//float4 color;
-
-void siderPS( out float4 colorOut : SV_Target )
+struct PS_INPUT
 {
-    colorOut = float4(0.2f,0.8f,0.2f,0.4f);
+    float4 Pos : POSITION;
+    float4 ShadeColor : COLOR;
+};
+
+void siderPS( PS_INPUT input, out float4 colorOut : SV_Target )
+{
+    colorOut = float4(input.ShadeColor);
 }

@@ -451,6 +451,11 @@ struct SimpleVertex {
     float x;
     float y;
     float z;
+    float w;
+    float r;
+    float g;
+    float b;
+    float a;
 };
 
 struct TexturedVertex {
@@ -466,12 +471,12 @@ struct TexturedVertex {
 
 SimpleVertex g_vertices[] =
 {
-    -1.0f, 1.0f, 0.5f,
-    1.0f, 1.0f, 0.5f,
-    1.0f, -1.0f, 0.5f,
-    1.0f, -1.0f, 0.5f,
-    -1.0f, -1.0f, 0.5f,
-    -1.0f, 1.0f, 0.5f,
+    { -1.0f, 1.0f, 0.5f, 1.f, 0.2f, 0.4f, 0.2f, 0.8f },
+    { 1.0f, 1.0f, 0.5f, 1.f, 0.2f, 0.4f, 0.2f, 0.8f },
+    { 1.0f, -1.0f, 0.5f, 1.f, 0.2f, 0.4f, 0.2f, 0.8f },
+    { 1.0f, -1.0f, 0.5f, 1.f, 0.2f, 0.4f, 0.2f, 0.8f },
+    { -1.0f, -1.0f, 0.5f, 1.f, 0.2f, 0.4f, 0.2f, 0.8f },
+    { -1.0f, 1.0f, 0.5f, 1.f, 0.2f, 0.4f, 0.2f, 0.8f },
 };
 
 static const TexturedVertex g_texVertices[] =
@@ -1327,6 +1332,21 @@ public:
             }
 
             p += wcslen(p) + 1;
+        }
+
+        // modify vertex buffer to set overlay bg-color
+        DWORD v = _overlay_background_color;
+        float r,g,b,a;
+        a = (float)((v >> 24) & 0xff) / 255.0;
+        b = (float)((v >> 16) & 0xff) / 255.0;
+        g = (float)((v >> 8) & 0xff) / 255.0;
+        r = (float)(v & 0xff) / 255.0;
+
+        for (int i=0; i<6; i++) {
+            g_vertices[i].r = r;
+            g_vertices[i].g = g;
+            g_vertices[i].b = b;
+            g_vertices[i].a = a;
         }
 
         _debug = GetPrivateProfileInt(_section_name.c_str(),
@@ -3279,7 +3299,8 @@ void prep_stuff()
     // Create the input layout
     D3D11_INPUT_ELEMENT_DESC elements[] =
     {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(float)*4, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
     UINT numElements = _countof(elements);
     //hr = DX11.Device->CreateInputLayout(elements, numElements, pBlobVS->GetBufferPointer(),
