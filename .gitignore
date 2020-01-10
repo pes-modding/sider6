@@ -22,3 +22,10 @@ vmdef.lua
 soft/zlib-1.2.11/*.exp
 soft/zlib-1.2.11/*.lib
 soft/zlib-1.2.11/*.dll
+soft/FW1FontWrapper/Source/vsimple.h
+soft/FW1FontWrapper/Source/vclip.h
+soft/FW1FontWrapper/Source/vempty.h
+soft/FW1FontWrapper/Source/gsimple.h
+soft/FW1FontWrapper/Source/gclip.h
+soft/FW1FontWrapper/Source/psimple.h
+soft/FW1FontWrapper/Source/pclip.h
