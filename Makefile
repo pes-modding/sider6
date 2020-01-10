@@ -65,6 +65,7 @@ $(LUALIBPATH)\$(LUALIB):
 	cd $(LUALIBPATH) && msvcbuild.bat gc64 static
 
 $(FW1LIBPATH)\$(FW1LIB):
+	cd $(FW1LIBROOT)\Source && nmake -f ..\Makefile
 	cd $(FW1LIBROOT) && msbuild /p:Configuration=Release
 
 DDSTextureLoader.obj: DDSTextureLoader.cpp DDSTextureLoader.h
@@ -105,5 +106,6 @@ clean:
 clean-all: clean
 	cd $(LUALIBPATH) && del /Q lua51.exp lua51.lib lua51.dll luajit.exe
 	cd $(FW1LIBROOT) && del /Q /S Debug Release
+	cd $(FW1LIBROOT)\Source && del /Q /S vsimple.h vclip.h vempty.h gsimple.h gclip.h psimple.h pclip.h
 	cd $(LPZLIB) && nmake -f win32\Makefile.msc clean
 
