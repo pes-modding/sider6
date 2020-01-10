@@ -12,7 +12,7 @@ namespace FW1FontWrapper {
 
 // Construct
 CFW1GlyphRenderStates::CFW1GlyphRenderStates() :
-	m_pfnD3DCompile(NULL),
+	//m_pfnD3DCompile(NULL),
 	
 	m_pDevice(NULL),
 	m_featureLevel(D3D_FEATURE_LEVEL_9_1),
@@ -83,6 +83,7 @@ HRESULT CFW1GlyphRenderStates::initRenderResources(
 	m_pDevice = pDevice;
 	m_featureLevel = m_pDevice->GetFeatureLevel();
 	
+/*
 	// D3DCompiler
 #ifdef FW1_DELAYLOAD_D3DCOMPILER_XX_DLL
 	HMODULE hD3DCompiler = LoadLibrary(D3DCOMPILER_DLL);
@@ -108,6 +109,8 @@ HRESULT CFW1GlyphRenderStates::initRenderResources(
 	m_pfnD3DCompile = D3DCompile;
 	hResult = S_OK;
 #endif
+*/
+    hResult = S_OK;
 	
 	// Create all needed resources
 	if(SUCCEEDED(hResult))

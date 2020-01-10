@@ -25,7 +25,7 @@
 #define SAFE_RELEASE(x) if (x) { x->Release(); x = NULL; }
 
 #include "d3d11.h"
-#include "d3dcompiler.h"
+//#include "d3dcompiler.h"
 #include "FW1FontWrapper.h"
 #include "dinput.h"
 #include "xinput.h"
@@ -38,7 +38,7 @@
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "d3dcompiler.lib")
+//#pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "xinput.lib")
@@ -3155,6 +3155,7 @@ void prep_stuff()
 
     DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
     ID3D10Blob* pBlobError = NULL;
+/*
     ID3D10Blob* pBlobVS = NULL;
     hr = D3DCompile(g_strVS, lstrlenA(g_strVS) + 1, "VS", NULL, NULL, "VS",
         "vs_4_0", dwShaderFlags, 0, &pBlobVS, &pBlobError);
@@ -3188,7 +3189,7 @@ void prep_stuff()
     hr = DX11.Device->CreateVertexShader(pBlobTexVS->GetBufferPointer(), pBlobTexVS->GetBufferSize(),
         NULL, &g_pTexVertexShader);
 
-/*
+*/
 #include "vshader.h"
     logu_("creating vertex shader from array of %d bytes\n", sizeof(g_siderVS));
     hr = DX11.Device->CreateVertexShader(g_siderVS, sizeof(g_siderVS), NULL, &g_pVertexShader);
@@ -3204,8 +3205,8 @@ void prep_stuff()
         logu_("DX11.Device->CreateVertexShader failed\n");
         return;
     }
-*/
 
+/*
     // Compile and create the pixel shader
     ID3D10Blob* pBlobPS = NULL;
     char pixel_shader[512];
@@ -3258,8 +3259,7 @@ void prep_stuff()
         return;
     }
     pBlobPS->Release();
-
-/*
+*/
 #include "pshader.h"
     logu_("creating pixel shader from array of %d bytes\n", sizeof(g_siderPS));
     hr = DX11.Device->CreatePixelShader(g_siderPS, sizeof(g_siderPS), NULL, &g_pPixelShader);
@@ -3275,7 +3275,6 @@ void prep_stuff()
         logu_("DX11.Device->CreatePixelShader failed\n");
         return;
     }
-*/
 
     // Create the input layout
     D3D11_INPUT_ELEMENT_DESC elements[] =
@@ -3283,10 +3282,10 @@ void prep_stuff()
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
     UINT numElements = _countof(elements);
-    hr = DX11.Device->CreateInputLayout(elements, numElements, pBlobVS->GetBufferPointer(),
-        pBlobVS->GetBufferSize(), &g_pInputLayout);
-    //hr = DX11.Device->CreateInputLayout(elements, numElements, g_siderVS,
-    //    sizeof(g_siderVS), &g_pInputLayout);
+    //hr = DX11.Device->CreateInputLayout(elements, numElements, pBlobVS->GetBufferPointer(),
+    //    pBlobVS->GetBufferSize(), &g_pInputLayout);
+    hr = DX11.Device->CreateInputLayout(elements, numElements, g_siderVS,
+        sizeof(g_siderVS), &g_pInputLayout);
     if (FAILED(hr)) {
         logu_("DX11.Device->CreateInputLayout failed\n");
         return;
@@ -3299,17 +3298,17 @@ void prep_stuff()
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(float)*4, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
     numElements = _countof(layout);
-    hr = DX11.Device->CreateInputLayout(layout, numElements, pBlobTexVS->GetBufferPointer(),
-        pBlobTexVS->GetBufferSize(), &g_pTexInputLayout);
-    //hr = DX11.Device->CreateInputLayout(layout, numElements, g_siderTexVS,
-    //    sizeof(g_siderTexVS), &g_pTexInputLayout);
+    //hr = DX11.Device->CreateInputLayout(layout, numElements, pBlobTexVS->GetBufferPointer(),
+    //    pBlobTexVS->GetBufferSize(), &g_pTexInputLayout);
+    hr = DX11.Device->CreateInputLayout(layout, numElements, g_siderTexVS,
+        sizeof(g_siderTexVS), &g_pTexInputLayout);
     if (FAILED(hr)) {
         logu_("DX11.Device->CreateInputLayout failed\n");
         return;
     }
 
-    pBlobVS->Release();
-    pBlobTexVS->Release();
+    //pBlobVS->Release();
+    //pBlobTexVS->Release();
 
     // Create the state objects
     D3D11_SAMPLER_DESC sampDesc = {};
