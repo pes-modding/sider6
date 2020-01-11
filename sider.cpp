@@ -489,9 +489,16 @@ static const TexturedVertex g_texVertices[] =
     { -1.f, 1.f, 0.4f, 1.f, 0.f, 0.f, 0.f, 0.f },
 };
 
+struct TexConstants {
+    float maxAlpha;
+};
+
+TexConstants g_constants;
+
 ID3D11BlendState* g_pBlendState = NULL;
 ID3D11InputLayout*          g_pInputLayout = NULL;
 ID3D11InputLayout*          g_pTexInputLayout = NULL;
+ID3D11Buffer*               g_pConstantBuffer = NULL;
 ID3D11Buffer*               g_pVertexBuffer = NULL;
 ID3D11Buffer*               g_pTexVertexBuffer = NULL;
 ID3D11RenderTargetView*     g_pRenderTargetView = NULL;
@@ -1348,6 +1355,9 @@ public:
             g_vertices[i].b = b;
             g_vertices[i].a = a;
         }
+
+        // modify constant buffer
+        g_constants.maxAlpha = _overlay_image_alpha_max;
 
         _debug = GetPrivateProfileInt(_section_name.c_str(),
             L"debug", _debug,
@@ -3328,6 +3338,20 @@ void prep_stuff()
         return;
     }
 
+    // define and set the constant buffers
+    // constant buffer
+    D3D11_BUFFER_DESC bd = { 0 };
+    bd.ByteWidth = 16;
+    bd.Usage = D3D11_USAGE_DEFAULT;
+    bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    D3D11_SUBRESOURCE_DATA initData;
+    initData.pSysMem = &g_constants;
+
+    if (FAILED(DX11.Device->CreateBuffer(&bd, &initData, &g_pConstantBuffer))) {
+        logu_("DX11.Device->CreateBuffer failed for constant buffer\n");
+        return;
+    }
+
     //pBlobVS->Release();
     //pBlobTexVS->Release();
 
@@ -3522,6 +3546,7 @@ void draw_ui(float top, float bottom, float right_margin)
         DX11.Context->PSSetShader(g_pTexPixelShader, NULL, 0);
         DX11.Context->PSSetShaderResources( 0, 1, &g_textureView );
         DX11.Context->PSSetSamplers( 0, 1, &g_pSamplerLinear );
+        DX11.Context->PSSetConstantBuffers( 0, 1, &g_pConstantBuffer );
 
         D3D11_VIEWPORT vp;
         vp.MinDepth = 0.0f;
