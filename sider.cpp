@@ -1,5 +1,15 @@
 #define UNICODE
 
+#define DR_FLAC_IMPLEMENTATION
+#include "../miniaudio/extras/dr_flac.h"  /* Enables FLAC decoding. */
+#define DR_MP3_IMPLEMENTATION
+#include "../miniaudio/extras/dr_mp3.h"   /* Enables MP3 decoding. */
+#define DR_WAV_IMPLEMENTATION
+#include "../miniaudio/extras/dr_wav.h"   /* Enables WAV decoding. */
+
+#define MINIAUDIO_IMPLEMENTATION
+#include "../miniaudio/miniaudio.h"
+
 //#include "stdafx.h"
 #include <windows.h>
 #include <shellapi.h>
@@ -7,6 +17,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <vector>
+#include <deque>
 #include <string>
 #include <map>
 #include <unordered_map>
@@ -1062,6 +1073,7 @@ public:
     bool _overlay_enabled;
     bool _overlay_on_from_start;
     wstring _overlay_font;
+    wstring _overlay_toggle_sound;
     DWORD _overlay_text_color;
     DWORD _overlay_background_color;
     float _overlay_image_alpha_max;
@@ -1127,6 +1139,7 @@ public:
                  _overlay_enabled(false),
                  _overlay_on_from_start(false),
                  _overlay_font(DEFAULT_OVERLAY_FONT),
+                 _overlay_toggle_sound(L""),
                  _overlay_text_color(DEFAULT_OVERLAY_TEXT_COLOR),
                  _overlay_background_color(DEFAULT_OVERLAY_BACKGROUND_COLOR),
                  _overlay_image_alpha_max(DEFAULT_OVERLAY_IMAGE_ALPHA_MAX),
@@ -1196,6 +1209,9 @@ public:
             }
             else if (wcscmp(L"overlay.font", key.c_str())==0) {
                 _overlay_font = value;
+            }
+            else if (wcscmp(L"overlay.toggle.sound", key.c_str())==0) {
+                _overlay_toggle_sound = value;
             }
             else if (wcscmp(L"start.game", key.c_str())==0) {
                 _start_game = value;
@@ -4180,6 +4196,73 @@ HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
     return hr;
 }
 
+struct sound_data_t {
+    ma_device* pDevice;
+    ma_decoder* pDecoder;
+    bool finished;
+};
+
+class sounds_t {
+    deque<sound_data_t*> _dq;
+    CRITICAL_SECTION _cs;
+public:
+    sounds_t() {
+        InitializeCriticalSection(&_cs);
+    }
+    ~sounds_t() {
+        DeleteCriticalSection(&_cs);
+    }
+    void add(sound_data_t* p) {
+        lock_t lock(&_cs);
+        _dq.push_back(p);
+        logu_("added sound data object %p\n", p);
+    }
+    void check() {
+        size_t sz;
+        {
+            lock_t lock(&_cs);
+            sz = _dq.size();
+        }
+        DBG(8192) logu_("checking sound_data objects (%d)\n", sz);
+        for (int i=0; i<sz; i++) {
+            lock_t lock(&_cs);
+            deque<sound_data_t*>::iterator it = _dq.begin();
+            sound_data_t *p = *it;
+            _dq.pop_front();
+            if (p->finished) {
+                // signalled: remove and destroy
+                logu_("sound_data object %p is done\n", p);
+                ma_device_uninit(p->pDevice);
+                ma_decoder_uninit(p->pDecoder);
+                free(p->pDevice);
+                free(p->pDecoder);
+                free(p);
+            }
+            else {
+                // re-enqueue
+                _dq.push_back(p);
+                DBG(8192) logu_("sound_data object %p is not done yet\n", p);
+            }
+        }
+    }
+};
+
+sounds_t* sounds(NULL);
+HANDLE _sound_cleanup_handle(INVALID_HANDLE_VALUE);
+
+DWORD sound_cleanup_func(LPVOID param)
+{
+    bool done(false);
+    sounds_t* sounds = (sounds_t*)param;
+    logu_("sound cleanup thread started\n");
+    while (!done) {
+        sounds->check();
+        Sleep(1000);
+    }
+    logu_("sound cleanup thread finished\n");
+    return 0;
+}
+
 HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain)
 {
     HRESULT hr = _org_CreateSwapChain(pFactory, pDevice, pDesc, ppSwapChain);
@@ -4222,6 +4305,14 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
     }
     else {
         prep_stuff();
+
+        // create sounds cleanup thread
+        if (sounds == NULL) {
+            sounds = new sounds_t();
+            DWORD thread_id;
+            _sound_cleanup_handle = CreateThread(NULL, 0, sound_cleanup_func, sounds, 0, &thread_id);
+            SetThreadPriority(_sound_cleanup_handle, THREAD_PRIORITY_LOWEST);
+        }
 
         logu_("Hooking Present\n");
         _org_Present = present;
@@ -6887,6 +6978,79 @@ void init_direct_input()
     }
 }
 
+void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+{
+    sound_data_t* sound_data = (sound_data_t*)pDevice->pUserData;
+    if (sound_data->pDecoder == NULL) {
+        return;
+    }
+
+    ma_uint64 n = ma_decoder_read_pcm_frames(sound_data->pDecoder, pOutput, frameCount);
+    //logu_("read %llu frames\n", n);
+
+    if (n == 0 && !sound_data->finished) {
+        logu_("signaling finish event for sound data object %p\n", sound_data);
+        sound_data->finished = true;
+    }
+
+    (void)pInput;
+}
+
+int sider_playfile(const wchar_t *filename)
+{
+    ma_result result;
+    ma_decoder* pDecoder;
+    ma_device* pDevice;
+    ma_device_config deviceConfig;
+    sound_data_t* sound_data;
+
+    DWORD thread_id;
+    wstring fname(sider_dir);
+    fname += filename;
+    char *utf8filename = Utf8::unicodeToUtf8(fname.c_str());
+    logu_("playing: %s\n", utf8filename);
+
+    pDevice = (ma_device*)malloc(sizeof(ma_device));
+    pDecoder = (ma_decoder*)malloc(sizeof(ma_decoder));
+    sound_data = (sound_data_t*)malloc(sizeof(sound_data_t));
+
+    result = ma_decoder_init_file(utf8filename, NULL, pDecoder);
+    if (result != MA_SUCCESS) {
+        logu_("ma_decoder_init_file failed\n");
+        Utf8::free(utf8filename);
+        return -2;
+    }
+    Utf8::free(utf8filename);
+
+    deviceConfig = ma_device_config_init(ma_device_type_playback);
+    deviceConfig.playback.format   = pDecoder->outputFormat;
+    deviceConfig.playback.channels = pDecoder->outputChannels;
+    deviceConfig.sampleRate        = pDecoder->outputSampleRate;
+    deviceConfig.dataCallback      = data_callback;
+    deviceConfig.pUserData         = sound_data;
+
+    if (ma_device_init(NULL, &deviceConfig, pDevice) != MA_SUCCESS) {
+        logu_("Failed to open playback device.\n");
+        ma_decoder_uninit(pDecoder);
+        free(pDecoder);
+        return -3;
+    }
+
+    sound_data->pDecoder = pDecoder;
+    sound_data->pDevice = pDevice;
+    sound_data->finished = false;
+
+    sounds->add(sound_data);
+
+    if (ma_device_start(pDevice) != MA_SUCCESS) {
+        logu_("Failed to start playback device.\n");
+        sound_data->finished = true;
+        return -4;
+    }
+
+    return 0;
+}
+
 INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
 {
     wstring *match = NULL;
@@ -7096,6 +7260,8 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
     return TRUE;
 }
 
+int sider_playfile(wchar_t *filename);
+
 LRESULT CALLBACK sider_foreground_idle_proc(int code, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(handle1, code, wParam, lParam);
 }
@@ -7112,6 +7278,11 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
             if (_overlay_on) {
                 _overlay_image.to_clear = true;
+            }
+
+            // play toggle sound
+            if (_config->_overlay_toggle_sound != L"") {
+                sider_playfile(_config->_overlay_toggle_sound.c_str());
             }
         }
         else if (wParam == _config->_vkey_reload_2 && ((lParam & 0x80000000) != 0)) {
