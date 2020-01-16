@@ -39,6 +39,8 @@ FW1LIB=FW1FontWrapper.lib
 FW1LIBPATH=soft\FW1FontWrapper\Release\x64
 FW1LIBROOT=soft\FW1FontWrapper
 
+MAINC=/I soft\miniaudio
+
 all: sider.exe sider.dll
 
 sider.res: sider.rc
@@ -47,6 +49,7 @@ sider_main.res: sider_main.rc sider.ico
 	$(RC) -r -fo sider_main.res sider_main.rc
 
 simple_playback.obj: simple_playback.c
+audio.obj: audio.cpp audio.h sider.h
 kmp.obj: kmp.cpp kmp.h
 common.obj: common.cpp common.h
 imageutil.obj: imageutil.cpp imageutil.h
@@ -88,8 +91,8 @@ ptexshader.h: ptexshader.hlsl
 	fxc /E siderTexPS /Ges /T ps_4_0 /Fh ptexshader.h ptexshader.hlsl
 
 sider.obj: sider.cpp sider.h patterns.h common.h imageutil.h vshader.h vtexshader.h pshader.h ptexshader.h libz.h kitinfo.h utf8.h
-sider.dll: sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(LUALIBPATH)\$(LUALIB) $(FW1LIBPATH)\$(FW1LIB) $(LPZLIB)\$(ZLIBLIB)
-	$(LINK) $(LFLAGS) /out:sider.dll /DLL sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(ZLIBLIB) /LIBPATH:$(LUALIBPATH) /LIBPATH:$(FW1LIBPATH) $(LIBS) $(LUALIB) $(FW1LIB) /LIBPATH:$(LPZLIB) /LIBPATH:"$(LIB)"
+sider.dll: sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj audio.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(LUALIBPATH)\$(LUALIB) $(FW1LIBPATH)\$(FW1LIB) $(LPZLIB)\$(ZLIBLIB)
+	$(LINK) $(LFLAGS) /out:sider.dll /DLL sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj audio.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(ZLIBLIB) /LIBPATH:$(LUALIBPATH) /LIBPATH:$(FW1LIBPATH) $(LIBS) $(LUALIB) $(FW1LIB) /LIBPATH:$(LPZLIB) /LIBPATH:"$(LIB)"
 
 sider.exe: main.obj sider.dll sider_main.res
 	$(LINK) $(LFLAGS) /out:sider.exe main.obj sider_main.res $(LIBS) sider.lib /LIBPATH:"$(LIB)"
@@ -101,7 +104,7 @@ $(LUAJIT): $(LUALIBPATH)\$(LUALIB)
 	copy $(LUALIBPATH)\$(LUAJIT) .
 
 .cpp.obj:
-	$(CC) $(CFLAGS) -c $(INC) $(LUAINC) $(FW1INC) $(ZLIBINC) $<
+	$(CC) $(CFLAGS) -c $(INC) $(LUAINC) $(FW1INC) $(ZLIBINC) $(MAINC) $<
 
 clean:
 	del *.obj *.dll *.exp *.res *.lib *.exe *~ memlib_lua.h vshader.h vtexshader.h pshader.h ptexshader.h

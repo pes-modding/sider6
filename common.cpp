@@ -13,6 +13,15 @@ static CRITICAL_SECTION _log_cs;
 
 #define LOG_BUF_LEN 0x200
 
+void string_strip_quotes(wstring& s)
+{
+    static const wchar_t* chars = L" \t\n\r\"'";
+    int e = s.find_last_not_of(chars);
+    s.erase(e + 1);
+    int b = s.find_first_not_of(chars);
+    s.erase(0,b);
+}
+
 __declspec(dllexport) void log_(const wchar_t *format, ...)
 {
     size_t count = LOG_BUF_LEN;

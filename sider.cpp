@@ -1,15 +1,5 @@
 #define UNICODE
 
-#define DR_FLAC_IMPLEMENTATION
-#include "../miniaudio/extras/dr_flac.h"  /* Enables FLAC decoding. */
-#define DR_MP3_IMPLEMENTATION
-#include "../miniaudio/extras/dr_mp3.h"   /* Enables MP3 decoding. */
-#define DR_WAV_IMPLEMENTATION
-#include "../miniaudio/extras/dr_wav.h"   /* Enables WAV decoding. */
-
-#define MINIAUDIO_IMPLEMENTATION
-#include "../miniaudio/miniaudio.h"
-
 //#include "stdafx.h"
 #include <windows.h>
 #include <shellapi.h>
@@ -17,12 +7,12 @@
 #include <stdint.h>
 #include <time.h>
 #include <vector>
-#include <deque>
 #include <string>
 #include <map>
 #include <unordered_map>
 #include "zlib.h"
 #include "imageutil.h"
+#include "config.h"
 #include "sider.h"
 #include "utf8.h"
 #include "common.h"
@@ -31,6 +21,7 @@
 #include "kmp.h"
 #include "libz.h"
 #include "kitinfo.h"
+#include "audio.h"
 
 #define DIRECTINPUT_VERSION 0x0800
 #define SAFE_RELEASE(x) if (x) { x->Release(); x = NULL; }
@@ -271,17 +262,6 @@ struct uniparam_team_t {
     bool has_gk1st;
 };
 bool _dummified(false);
-
-class lock_t {
-public:
-    CRITICAL_SECTION *_cs;
-    lock_t(CRITICAL_SECTION *cs) : _cs(cs) {
-        EnterCriticalSection(_cs);
-    }
-    ~lock_t() {
-        LeaveCriticalSection(_cs);
-    }
-};
 
 /**
 #define LOOKUP_CACHE_KEY_LEN 512
@@ -686,21 +666,6 @@ wchar_t _current_overlay_text[4096] = L"hello world!";
 char _overlay_utf8_text[4096];
 char _overlay_utf8_image_path[2048];
 
-#define DEFAULT_OVERLAY_TEXT_COLOR 0xc080ff80
-#define DEFAULT_OVERLAY_BACKGROUND_COLOR 0x80102010
-#define DEFAULT_OVERLAY_IMAGE_ALPHA_MAX 1.0f
-#define DEFAULT_OVERLAY_FONT L"Arial"
-#define DEFAULT_OVERLAY_FONT_SIZE 0
-#define DEFAULT_OVERLAY_LOCATION 0
-#define DEFAULT_OVERLAY_VKEY_TOGGLE 0x20
-#define DEFAULT_OVERLAY_VKEY_NEXT_MODULE 0x31
-#define DEFAULT_VKEY_RELOAD_1 0x10 //Shift
-#define DEFAULT_VKEY_RELOAD_2 0x52 //R
-#define DEFAULT_GAMEPAD_STICK_SENSITIVITY 0.6
-#define DEFAULT_GAMEPAD_POLL_INTERVAL_MSEC 200
-#define DEFAULT_GAMEPAD_OVERLAY_POLL_INTERVAL_MSEC 32
-#define DEFAULT_CACHE_SIZE 32
-
 wchar_t module_filename[MAX_PATH];
 wchar_t dll_log[MAX_PATH];
 wchar_t dll_ini[MAX_PATH];
@@ -708,15 +673,6 @@ wchar_t gamepad_ini[MAX_PATH];
 wchar_t sider_dir[MAX_PATH];
 
 static int get_team_id(MATCH_INFO_STRUCT *mi, int home_or_away);
-
-static void string_strip_quotes(wstring& s)
-{
-    static const wchar_t* chars = L" \t\n\r\"'";
-    int e = s.find_last_not_of(chars);
-    s.erase(e + 1);
-    int b = s.find_first_not_of(chars);
-    s.erase(0,b);
-}
 
 static BYTE* get_uniparam()
 {
@@ -1043,436 +999,6 @@ public:
             return true;
         }
         return false;
-    }
-};
-
-class config_t {
-public:
-    int _debug;
-    int _priority_class;
-    bool _livecpk_enabled;
-    bool _lookup_cache_enabled;
-    bool _lua_enabled;
-    bool _jit_enabled;
-    bool _luajit_extensions_enabled;
-    bool _dummify_uniparam;
-    vector<wstring> _lua_extra_globals;
-    int _lua_gc_opt;
-    int _dll_mapping_option;
-    int _key_cache_ttl_sec;
-    int _rewrite_cache_ttl_sec;
-    int _cache_size;
-    wstring _section_name;
-    vector<wstring> _cpk_roots;
-    wstring _start_game;
-    vector<wstring> _exe_names;
-    vector<wstring> _module_names;
-    bool _close_sider_on_exit;
-    bool _start_minimized;
-    bool _free_side_select;
-    bool _overlay_enabled;
-    bool _overlay_on_from_start;
-    wstring _overlay_font;
-    wstring _overlay_toggle_sound;
-    DWORD _overlay_text_color;
-    DWORD _overlay_background_color;
-    float _overlay_image_alpha_max;
-    int _overlay_location;
-    int _overlay_font_size;
-    int _overlay_vkey_toggle;
-    int _overlay_vkey_next_module;
-    int _vkey_reload_1;
-    int _vkey_reload_2;
-    int _num_minutes;
-    BYTE *_hp_at_read_file;
-    BYTE *_hp_at_get_size;
-    BYTE *_hp_at_extend_cpk;
-    BYTE *_hp_at_mem_copy;
-    BYTE *_hp_at_lookup_file;
-    BYTE *_hp_at_set_team_id;
-    BYTE *_hp_at_set_settings;
-    BYTE *_hp_at_trophy_check;
-    BYTE *_hp_at_context_reset;
-    BYTE *_hp_at_trophy_table;
-    BYTE *_hp_at_ball_name;
-    BYTE *_hp_at_stadium_name;
-    BYTE *_hp_at_def_stadium_name;
-    BYTE *_hp_at_set_stadium_choice;
-    BYTE *_hp_at_check_kit_choice;
-    BYTE *_hp_at_get_uniparam;
-    BYTE *_hp_at_data_ready;
-    BYTE *_hp_at_call_to_move;
-    BYTE *_hp_at_kit_status;
-    BYTE *_hp_at_set_team_for_kits;
-    BYTE *_hp_at_clear_team_for_kits;
-    BYTE *_hp_at_uniparam_loaded;
-
-    BYTE *_hp_at_set_min_time;
-    BYTE *_hp_at_set_max_time;
-    BYTE *_hp_at_set_minutes;
-    BYTE *_hp_at_sider;
-
-    BYTE *_hp_at_dxgi;
-
-    bool _hook_set_team_id;
-    bool _hook_set_settings;
-    bool _hook_context_reset;
-    bool _hook_trophy_check;
-    bool _hook_trophy_table;
-
-    ~config_t() {}
-    config_t(const wstring& section_name, const wchar_t* config_ini) :
-                 _section_name(section_name),
-                 _debug(0),
-                 _priority_class(0),
-                 _livecpk_enabled(false),
-                 _lookup_cache_enabled(true),
-                 _lua_enabled(true),
-                 _jit_enabled(true),
-                 _luajit_extensions_enabled(false),
-                 _dummify_uniparam(true),
-                 _lua_gc_opt(LUA_GCSTEP),
-                 _close_sider_on_exit(false),
-                 _start_minimized(false),
-                 _free_side_select(false),
-                 _start_game(L""),
-                 _overlay_enabled(false),
-                 _overlay_on_from_start(false),
-                 _overlay_font(DEFAULT_OVERLAY_FONT),
-                 _overlay_toggle_sound(L""),
-                 _overlay_text_color(DEFAULT_OVERLAY_TEXT_COLOR),
-                 _overlay_background_color(DEFAULT_OVERLAY_BACKGROUND_COLOR),
-                 _overlay_image_alpha_max(DEFAULT_OVERLAY_IMAGE_ALPHA_MAX),
-                 _overlay_font_size(DEFAULT_OVERLAY_FONT_SIZE),
-                 _overlay_location(DEFAULT_OVERLAY_LOCATION),
-                 _overlay_vkey_toggle(DEFAULT_OVERLAY_VKEY_TOGGLE),
-                 _overlay_vkey_next_module(DEFAULT_OVERLAY_VKEY_NEXT_MODULE),
-                 _vkey_reload_1(DEFAULT_VKEY_RELOAD_1),
-                 _vkey_reload_2(DEFAULT_VKEY_RELOAD_2),
-                 _key_cache_ttl_sec(10),
-                 _rewrite_cache_ttl_sec(10),
-                 _cache_size(DEFAULT_CACHE_SIZE),
-                 _hp_at_read_file(NULL),
-                 _hp_at_get_size(NULL),
-                 _hp_at_extend_cpk(NULL),
-                 _hp_at_mem_copy(NULL),
-                 _hp_at_lookup_file(NULL),
-                 _hp_at_set_team_id(NULL),
-                 _hp_at_set_settings(NULL),
-                 _hp_at_trophy_check(NULL),
-                 _hp_at_context_reset(NULL),
-                 _hp_at_set_stadium_choice(NULL),
-                 _hp_at_check_kit_choice(NULL),
-                 _hp_at_get_uniparam(NULL),
-                 _hp_at_data_ready(NULL),
-                 _hp_at_call_to_move(NULL),
-                 _hp_at_kit_status(NULL),
-                 _hp_at_set_team_for_kits(NULL),
-                 _hp_at_clear_team_for_kits(NULL),
-                 _hp_at_uniparam_loaded(NULL),
-                 _hp_at_set_min_time(NULL),
-                 _hp_at_set_max_time(NULL),
-                 _hp_at_set_minutes(NULL),
-                 _hp_at_sider(NULL),
-                 _hp_at_trophy_table(NULL),
-                 _hp_at_ball_name(NULL),
-                 _hp_at_stadium_name(NULL),
-                 _hp_at_def_stadium_name(NULL),
-                 _hp_at_dxgi(NULL),
-                 _hook_set_team_id(true),
-                 _hook_set_settings(true),
-                 _hook_context_reset(true),
-                 _hook_trophy_check(true),
-                 _hook_trophy_table(true),
-                 _num_minutes(0)
-    {
-        wchar_t settings[32767];
-        RtlZeroMemory(settings, sizeof(settings));
-        if (GetPrivateProfileSection(_section_name.c_str(),
-            settings, sizeof(settings)/sizeof(wchar_t), config_ini)==0) {
-            // no ini-file, or no "[sider]" section
-            return;
-        }
-
-        wchar_t* p = settings;
-        while (*p) {
-            wstring pair(p);
-            wstring key(pair.substr(0, pair.find(L"=")));
-            wstring value(pair.substr(pair.find(L"=")+1));
-            string_strip_quotes(value);
-
-            if (wcscmp(L"exe.name", key.c_str())==0) {
-                _exe_names.push_back(value);
-            }
-            else if (wcscmp(L"lua.module", key.c_str())==0) {
-                _module_names.push_back(value);
-            }
-            else if (wcscmp(L"overlay.font", key.c_str())==0) {
-                _overlay_font = value;
-            }
-            else if (wcscmp(L"overlay.toggle.sound", key.c_str())==0) {
-                _overlay_toggle_sound = value;
-            }
-            else if (wcscmp(L"start.game", key.c_str())==0) {
-                _start_game = value;
-            }
-            else if (wcscmp(L"overlay.text-color", key.c_str())==0) {
-                if (value.size() >= 8) {
-                    DWORD c,v;
-                    // red
-                    if (swscanf(value.substr(0,2).c_str(), L"%x", &c)==1) { v = c; }
-                    else if (swscanf(value.substr(0,2).c_str(), L"%X", &c)==1) { v = c; }
-                    // green
-                    if (swscanf(value.substr(2,2).c_str(), L"%x", &c)==1) { v = v | (c << 8); }
-                    else if (swscanf(value.substr(2,2).c_str(), L"%X", &c)==1) { v = v | (c << 8); }
-                    // blue
-                    if (swscanf(value.substr(4,2).c_str(), L"%x", &c)==1) { v = v | (c << 16); }
-                    else if (swscanf(value.substr(4,2).c_str(), L"%X", &c)==1) { v = v | (c << 16); }
-                    // alpha
-                    if (swscanf(value.substr(6,2).c_str(), L"%x", &c)==1) { v = v | (c << 24); }
-                    else if (swscanf(value.substr(6,2).c_str(), L"%X", &c)==1) { v = v | (c << 24); }
-                    _overlay_text_color = v;
-                }
-            }
-            else if (wcscmp(L"overlay.background-color", key.c_str())==0) {
-                if (value.size() >= 8) {
-                    DWORD c,v;
-                    // red
-                    if (swscanf(value.substr(0,2).c_str(), L"%x", &c)==1) { v = c; }
-                    else if (swscanf(value.substr(0,2).c_str(), L"%X", &c)==1) { v = c; }
-                    // green
-                    if (swscanf(value.substr(2,2).c_str(), L"%x", &c)==1) { v = v | (c << 8); }
-                    else if (swscanf(value.substr(2,2).c_str(), L"%X", &c)==1) { v = v | (c << 8); }
-                    // blue
-                    if (swscanf(value.substr(4,2).c_str(), L"%x", &c)==1) { v = v | (c << 16); }
-                    else if (swscanf(value.substr(4,2).c_str(), L"%X", &c)==1) { v = v | (c << 16); }
-                    // alpha
-                    if (swscanf(value.substr(6,2).c_str(), L"%x", &c)==1) { v = v | (c << 24); }
-                    else if (swscanf(value.substr(6,2).c_str(), L"%X", &c)==1) { v = v | (c << 24); }
-                    _overlay_background_color = v;
-                }
-            }
-            else if (wcscmp(L"overlay.image-alpha-max", key.c_str())==0) {
-                float alpha = 1.0f;
-                if (swscanf(value.c_str(),L"%f",&alpha)==1) {
-                    _overlay_image_alpha_max = min(1.0f, max(0.0f, alpha));
-                }
-            }
-            else if (wcscmp(L"overlay.location", key.c_str())==0) {
-                _overlay_location = 0;
-                if (value == L"bottom") {
-                    _overlay_location = 1;
-                }
-            }
-            else if (wcscmp(L"overlay.vkey.toggle", key.c_str())==0) {
-                int v;
-                if (swscanf(value.c_str(), L"%x", &v)==1) {
-                    _overlay_vkey_toggle = v;
-                }
-            }
-            else if (wcscmp(L"overlay.vkey.next-module", key.c_str())==0) {
-                int v;
-                if (swscanf(value.c_str(), L"%x", &v)==1) {
-                    _overlay_vkey_next_module = v;
-                }
-            }
-            else if (wcscmp(L"vkey.reload-1", key.c_str())==0) {
-                int v;
-                if (swscanf(value.c_str(), L"%x", &v)==1) {
-                    _vkey_reload_1 = v;
-                }
-            }
-            else if (wcscmp(L"vkey.reload-2", key.c_str())==0) {
-                int v;
-                if (swscanf(value.c_str(), L"%x", &v)==1) {
-                    _vkey_reload_2 = v;
-                }
-            }
-            else if (wcscmp(L"game.priority.class", key.c_str())==0) {
-                int v;
-                if (value == L"above_normal") {
-                    _priority_class = 0x8000;
-                }
-                else if (value == L"below_normal") {
-                    _priority_class = 0x4000;
-                }
-                else if (value == L"high") {
-                    _priority_class = 0x80;
-                }
-                else if (value == L"idle") {
-                    _priority_class = 0x40;
-                }
-                else if (value == L"normal") {
-                    _priority_class = 0x20;
-                }
-                else if (value == L"background_begin") {
-                    _priority_class = 0x00100000;
-                }
-                else if (value == L"background_end") {
-                    _priority_class = 0x00200000;
-                }
-                else if (value == L"realtime") {
-                    _priority_class = 0x100;
-                }
-                else if (swscanf(value.c_str(), L"%x", &v)==1) {
-                    _priority_class = v;
-                }
-            }
-            else if (wcscmp(L"lua.extra-globals", key.c_str())==0) {
-                bool done(false);
-                int start = 0, end = 0;
-                while (!done) {
-                    end = value.find(L",", start);
-                    done = (end == string::npos);
-
-                    wstring name((done) ?
-                        value.substr(start) :
-                        value.substr(start, end - start));
-                    string_strip_quotes(name);
-                    if (!name.empty()) {
-                        _lua_extra_globals.push_back(name);
-                    }
-                    start = end + 1;
-                }
-            }
-            else if (wcscmp(L"lua.gc.opt", key.c_str())==0) {
-                _lua_gc_opt = LUA_GCSTEP;
-                if (value == L"collect") {
-                    _lua_gc_opt = LUA_GCCOLLECT;
-                }
-            }
-            else if (wcscmp(L"cpk.root", key.c_str())==0) {
-                if (value[value.size()-1] != L'\\') {
-                    value += L'\\';
-                }
-                // handle relative roots
-                if (value[0]==L'.') {
-                    wstring rel(value);
-                    value = sider_dir;
-                    value += rel;
-                }
-                _cpk_roots.push_back(value);
-            }
-
-            p += wcslen(p) + 1;
-        }
-
-        // modify vertex buffer to set overlay bg-color
-        DWORD v = _overlay_background_color;
-        float r,g,b,a;
-        a = (float)((v >> 24) & 0xff) / 255.0;
-        b = (float)((v >> 16) & 0xff) / 255.0;
-        g = (float)((v >> 8) & 0xff) / 255.0;
-        r = (float)(v & 0xff) / 255.0;
-
-        for (int i=0; i<6; i++) {
-            g_vertices[i].r = r;
-            g_vertices[i].g = g;
-            g_vertices[i].b = b;
-            g_vertices[i].a = a;
-        }
-
-        // modify constant buffer
-        g_constants.maxAlpha = _overlay_image_alpha_max;
-
-        _debug = GetPrivateProfileInt(_section_name.c_str(),
-            L"debug", _debug,
-            config_ini);
-
-        _close_sider_on_exit = GetPrivateProfileInt(_section_name.c_str(),
-            L"close.on.exit", _close_sider_on_exit,
-            config_ini);
-
-        _start_minimized = GetPrivateProfileInt(_section_name.c_str(),
-            L"start.minimized", _start_minimized,
-            config_ini);
-
-        _free_side_select = GetPrivateProfileInt(_section_name.c_str(),
-            L"free.side.select", _free_side_select,
-            config_ini);
-
-        _overlay_enabled = GetPrivateProfileInt(_section_name.c_str(),
-            L"overlay.enabled", _overlay_enabled,
-            config_ini);
-
-        _overlay_on_from_start = GetPrivateProfileInt(_section_name.c_str(),
-            L"overlay.on-from-start", _overlay_on_from_start,
-            config_ini);
-
-        _overlay_font_size = GetPrivateProfileInt(_section_name.c_str(),
-            L"overlay.font-size", _overlay_font_size,
-            config_ini);
-
-        _livecpk_enabled = GetPrivateProfileInt(_section_name.c_str(),
-            L"livecpk.enabled", _livecpk_enabled,
-            config_ini);
-
-        _lookup_cache_enabled = GetPrivateProfileInt(_section_name.c_str(),
-            L"lookup-cache.enabled", _lookup_cache_enabled,
-            config_ini);
-
-        _lua_enabled = GetPrivateProfileInt(_section_name.c_str(),
-            L"lua.enabled", _lua_enabled,
-            config_ini);
-
-        _jit_enabled = GetPrivateProfileInt(_section_name.c_str(),
-            L"jit.enabled", _jit_enabled,
-            config_ini);
-
-        _luajit_extensions_enabled = GetPrivateProfileInt(_section_name.c_str(),
-            L"luajit.ext.enabled", _luajit_extensions_enabled,
-            config_ini);
-
-        _dummify_uniparam = GetPrivateProfileInt(_section_name.c_str(),
-            L"dummify.uniparam", _dummify_uniparam,
-            config_ini);
-
-        _key_cache_ttl_sec = GetPrivateProfileInt(_section_name.c_str(),
-            L"key-cache.ttl-sec", _key_cache_ttl_sec,
-            config_ini);
-
-        _rewrite_cache_ttl_sec = GetPrivateProfileInt(_section_name.c_str(),
-            L"rewrite-cache.ttl-sec", _rewrite_cache_ttl_sec,
-            config_ini);
-
-        _cache_size = GetPrivateProfileInt(_section_name.c_str(),
-            L"cache.size", _cache_size,
-            config_ini);
-        if (_cache_size < 1) {
-            _cache_size = DEFAULT_CACHE_SIZE;
-        }
-        else {
-            // need to ensure power-of-2 size
-            size_t v = 1;
-            while ((v << 1) <= _cache_size) {
-                v = v << 1;
-            }
-            _cache_size = v;
-        }
-
-        _num_minutes = GetPrivateProfileInt(_section_name.c_str(),
-            L"match.minutes", _num_minutes,
-            config_ini);
-
-        _hook_set_team_id = GetPrivateProfileInt(_section_name.c_str(),
-            L"hook.set-team-id", _hook_set_team_id,
-            config_ini);
-
-        _hook_set_settings = GetPrivateProfileInt(_section_name.c_str(),
-            L"hook.set-settings", _hook_set_settings,
-            config_ini);
-
-        _hook_context_reset = GetPrivateProfileInt(_section_name.c_str(),
-            L"hook.context-reset", _hook_context_reset,
-            config_ini);
-
-        _hook_trophy_table = GetPrivateProfileInt(_section_name.c_str(),
-            L"hook.trophy-table", _hook_trophy_table,
-            config_ini);
-
-        _hook_trophy_check = GetPrivateProfileInt(_section_name.c_str(),
-            L"hook.trophy-check", _hook_trophy_check,
-            config_ini);
     }
 };
 
@@ -2015,6 +1541,24 @@ static int sider_log(lua_State *L) {
 void read_configuration(config_t*& config)
 {
     config = new config_t(L"sider", dll_ini);
+
+    // modify vertex buffer to set overlay bg-color
+    DWORD v = config->_overlay_background_color;
+    float r,g,b,a;
+    a = (float)((v >> 24) & 0xff) / 255.0;
+    b = (float)((v >> 16) & 0xff) / 255.0;
+    g = (float)((v >> 8) & 0xff) / 255.0;
+    r = (float)(v & 0xff) / 255.0;
+
+    for (int i=0; i<6; i++) {
+        g_vertices[i].r = r;
+        g_vertices[i].g = g;
+        g_vertices[i].b = b;
+        g_vertices[i].a = a;
+    }
+
+    // modify constant buffer
+    g_constants.maxAlpha = config->_overlay_image_alpha_max;
 }
 
 void read_gamepad_global_mapping(gamepad_config_t*& config)
@@ -4196,73 +3740,6 @@ HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
     return hr;
 }
 
-struct sound_data_t {
-    ma_device* pDevice;
-    ma_decoder* pDecoder;
-    bool finished;
-};
-
-class sounds_t {
-    deque<sound_data_t*> _dq;
-    CRITICAL_SECTION _cs;
-public:
-    sounds_t() {
-        InitializeCriticalSection(&_cs);
-    }
-    ~sounds_t() {
-        DeleteCriticalSection(&_cs);
-    }
-    void add(sound_data_t* p) {
-        lock_t lock(&_cs);
-        _dq.push_back(p);
-        logu_("added sound data object %p\n", p);
-    }
-    void check() {
-        size_t sz;
-        {
-            lock_t lock(&_cs);
-            sz = _dq.size();
-        }
-        DBG(8192) logu_("checking sound_data objects (%d)\n", sz);
-        for (int i=0; i<sz; i++) {
-            lock_t lock(&_cs);
-            deque<sound_data_t*>::iterator it = _dq.begin();
-            sound_data_t *p = *it;
-            _dq.pop_front();
-            if (p->finished) {
-                // signalled: remove and destroy
-                logu_("sound_data object %p is done\n", p);
-                ma_device_uninit(p->pDevice);
-                ma_decoder_uninit(p->pDecoder);
-                free(p->pDevice);
-                free(p->pDecoder);
-                free(p);
-            }
-            else {
-                // re-enqueue
-                _dq.push_back(p);
-                DBG(8192) logu_("sound_data object %p is not done yet\n", p);
-            }
-        }
-    }
-};
-
-sounds_t* sounds(NULL);
-HANDLE _sound_cleanup_handle(INVALID_HANDLE_VALUE);
-
-DWORD sound_cleanup_func(LPVOID param)
-{
-    bool done(false);
-    sounds_t* sounds = (sounds_t*)param;
-    logu_("sound cleanup thread started\n");
-    while (!done) {
-        sounds->check();
-        Sleep(1000);
-    }
-    logu_("sound cleanup thread finished\n");
-    return 0;
-}
-
 HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain)
 {
     HRESULT hr = _org_CreateSwapChain(pFactory, pDevice, pDesc, ppSwapChain);
@@ -4306,13 +3783,8 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
     else {
         prep_stuff();
 
-        // create sounds cleanup thread
-        if (sounds == NULL) {
-            sounds = new sounds_t();
-            DWORD thread_id;
-            _sound_cleanup_handle = CreateThread(NULL, 0, sound_cleanup_func, sounds, 0, &thread_id);
-            SetThreadPriority(_sound_cleanup_handle, THREAD_PRIORITY_LOWEST);
-        }
+        // initialize audio lib
+        audio_init();
 
         logu_("Hooking Present\n");
         _org_Present = present;
@@ -6978,79 +6450,6 @@ void init_direct_input()
     }
 }
 
-void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
-{
-    sound_data_t* sound_data = (sound_data_t*)pDevice->pUserData;
-    if (sound_data->pDecoder == NULL) {
-        return;
-    }
-
-    ma_uint64 n = ma_decoder_read_pcm_frames(sound_data->pDecoder, pOutput, frameCount);
-    //logu_("read %llu frames\n", n);
-
-    if (n == 0 && !sound_data->finished) {
-        logu_("signaling finish event for sound data object %p\n", sound_data);
-        sound_data->finished = true;
-    }
-
-    (void)pInput;
-}
-
-int sider_playfile(const wchar_t *filename)
-{
-    ma_result result;
-    ma_decoder* pDecoder;
-    ma_device* pDevice;
-    ma_device_config deviceConfig;
-    sound_data_t* sound_data;
-
-    DWORD thread_id;
-    wstring fname(sider_dir);
-    fname += filename;
-    char *utf8filename = Utf8::unicodeToUtf8(fname.c_str());
-    logu_("playing: %s\n", utf8filename);
-
-    pDevice = (ma_device*)malloc(sizeof(ma_device));
-    pDecoder = (ma_decoder*)malloc(sizeof(ma_decoder));
-    sound_data = (sound_data_t*)malloc(sizeof(sound_data_t));
-
-    result = ma_decoder_init_file(utf8filename, NULL, pDecoder);
-    if (result != MA_SUCCESS) {
-        logu_("ma_decoder_init_file failed\n");
-        Utf8::free(utf8filename);
-        return -2;
-    }
-    Utf8::free(utf8filename);
-
-    deviceConfig = ma_device_config_init(ma_device_type_playback);
-    deviceConfig.playback.format   = pDecoder->outputFormat;
-    deviceConfig.playback.channels = pDecoder->outputChannels;
-    deviceConfig.sampleRate        = pDecoder->outputSampleRate;
-    deviceConfig.dataCallback      = data_callback;
-    deviceConfig.pUserData         = sound_data;
-
-    if (ma_device_init(NULL, &deviceConfig, pDevice) != MA_SUCCESS) {
-        logu_("Failed to open playback device.\n");
-        ma_decoder_uninit(pDecoder);
-        free(pDecoder);
-        return -3;
-    }
-
-    sound_data->pDecoder = pDecoder;
-    sound_data->pDevice = pDevice;
-    sound_data->finished = false;
-
-    sounds->add(sound_data);
-
-    if (ma_device_start(pDevice) != MA_SUCCESS) {
-        logu_("Failed to start playback device.\n");
-        sound_data->finished = true;
-        return -4;
-    }
-
-    return 0;
-}
-
 INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
 {
     wstring *match = NULL;
@@ -7260,8 +6659,6 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
     return TRUE;
 }
 
-int sider_playfile(wchar_t *filename);
-
 LRESULT CALLBACK sider_foreground_idle_proc(int code, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(handle1, code, wParam, lParam);
 }
@@ -7282,7 +6679,15 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
 
             // play toggle sound
             if (_config->_overlay_toggle_sound != L"") {
-                sider_playfile(_config->_overlay_toggle_sound.c_str());
+                wstring fname(sider_dir);
+                fname += _config->_overlay_toggle_sound;
+                char *utf8filename = Utf8::unicodeToUtf8(fname.c_str());
+
+                sound_t* sound = audio_new_sound(utf8filename);
+                if (sound) {
+                    audio_play(sound);
+                }
+                Utf8::free(utf8filename);
             }
         }
         else if (wParam == _config->_vkey_reload_2 && ((lParam & 0x80000000) != 0)) {
