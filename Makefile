@@ -20,7 +20,8 @@ ZLIBINC=/I soft\zlib-1.2.11
 ZLIBLIB=zlib.lib
 
 # 4731: warning about ebp modification
-CFLAGS=/nologo /Od /EHsc /wd4731 /MT /D_WIN32_WINNT=0x601 /DMA_NO_AVX2 /DMA_NO_AVX512 $(EXTRA_CFLAGS)
+#CFLAGS=/nologo /Od /EHsc /wd4731 /MT /D_WIN32_WINNT=0x601 /DMA_NO_AVX2 /DMA_NO_AVX512 $(EXTRA_CFLAGS)
+CFLAGS=/nologo /Od /EHsc /wd4731 /MT /D_WIN32_WINNT=0x601 $(EXTRA_CFLAGS)
 LFLAGS=/NOLOGO /DEFAULTLIB:"LIBCMT"
 LIBS=user32.lib gdi32.lib comctl32.lib version.lib ole32.lib shell32.lib
 
@@ -49,7 +50,7 @@ sider_main.res: sider_main.rc sider.ico
 	$(RC) -r -fo sider_main.res sider_main.rc
 
 simple_playback.obj: simple_playback.c
-audio.obj: audio.cpp audio.h sider.h
+audio.obj: audio.cpp audio.h sider.h common.h config.h
 kmp.obj: kmp.cpp kmp.h
 common.obj: common.cpp common.h
 imageutil.obj: imageutil.cpp imageutil.h
@@ -90,7 +91,7 @@ pshader.h: pshader.hlsl
 ptexshader.h: ptexshader.hlsl
 	fxc /E siderTexPS /Ges /T ps_4_0 /Fh ptexshader.h ptexshader.hlsl
 
-sider.obj: sider.cpp sider.h patterns.h common.h imageutil.h vshader.h vtexshader.h pshader.h ptexshader.h libz.h kitinfo.h utf8.h
+sider.obj: sider.cpp sider.h patterns.h common.h config.h audio.h imageutil.h vshader.h vtexshader.h pshader.h ptexshader.h libz.h kitinfo.h utf8.h
 sider.dll: sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj audio.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(LUALIBPATH)\$(LUALIB) $(FW1LIBPATH)\$(FW1LIB) $(LPZLIB)\$(ZLIBLIB)
 	$(LINK) $(LFLAGS) /out:sider.dll /DLL sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj libz.obj audio.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(ZLIBLIB) /LIBPATH:$(LUALIBPATH) /LIBPATH:$(FW1LIBPATH) $(LIBS) $(LUALIB) $(FW1LIB) /LIBPATH:$(LPZLIB) /LIBPATH:"$(LIB)"
 

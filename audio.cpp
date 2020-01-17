@@ -18,6 +18,7 @@
 #include <deque>
 
 extern config_t*_config;
+extern void module_call_callback_with_context(lua_State *L, lua_State *from_L, int callback_index);
 
 #define DBG(n) if (_config->_debug & n)
 
@@ -28,6 +29,13 @@ struct sound_t {
     int state;
     void* extra;
 };
+
+struct extra_info_t {
+    lua_State *L;
+    int callback_index;
+};
+
+lua_State *_audio_L;
 
 class sound_tracker_t {
     std::deque<sound_t*> _dq;
@@ -59,13 +67,24 @@ public:
             if (p->state == Audio::finished) {
                 // signalled: remove and destroy
                 logu_("sound object %p is done\n", p);
-                ma_device_uninit(p->pDevice);
-                ma_decoder_uninit(p->pDecoder);
-                free(p->pDevice);
-                free(p->pDecoder);
-                p->pDevice = NULL;
-                p->pDecoder = NULL;
-                free(p);
+                // check if there is a callback then call it
+                if (p->extra) {
+                    extra_info_t* info = (extra_info_t*)p->extra;
+                    if ((info->L) && (info->callback_index > 0)) {
+                        module_call_callback_with_context(info->L, _audio_L, info->callback_index);
+                    }
+                }
+                if (p->pDevice) {
+                    ma_device_uninit(p->pDevice);
+                    free(p->pDevice);
+                    p->pDevice = NULL;
+                }
+                if (p->pDecoder) {
+                    ma_decoder_uninit(p->pDecoder);
+                    free(p->pDecoder);
+                    p->pDecoder = NULL;
+                }
+                //free(p);
             }
             else {
                 // re-enqueue
@@ -96,6 +115,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 {
     sound_t* p = (sound_t*)pDevice->pUserData;
     if (!p || p->pDecoder == NULL) {
+        logu_("warning: pDevice=%p, pDecoder=%p\n", pDevice, p->pDecoder);
         return;
     }
 
@@ -158,6 +178,7 @@ sound_t* audio_new_sound(const char *filename)
     sound->pDecoder = pDecoder;
     sound->pDevice = pDevice;
     sound->state = Audio::created;
+    sound->extra = NULL;
     return sound;
 }
 
@@ -165,16 +186,112 @@ int audio_play(sound_t* sound) {
     if (!sound || !sound->pDevice) {
         return -1;
     }
-    logu_("playing: %s\n", sound->filename);
-    _sound_tracker->add(sound);
-    if (ma_device_start(sound->pDevice) != MA_SUCCESS) {
-        sound->state = Audio::finished;
-        return -2;
+    switch (sound->state) {
+        case Audio::created:
+            _sound_tracker->add(sound);
+        case Audio::paused:
+            if (ma_device_start(sound->pDevice) != MA_SUCCESS) {
+                sound->state = Audio::finished;
+                return -2;
+            }
+            break;
+        case Audio::finished:
+            return 0;
     }
+    sound->state = Audio::playing;
+    logu_("playing: %s\n", sound->filename);
     return 0;
 }
 
-static int audio_new(lua_State *L)
+int audio_stop(sound_t* sound) {
+    if (!sound || !sound->pDevice) {
+        return -1;
+    }
+    switch (sound->state) {
+        case Audio::playing:
+            if (ma_device_stop(sound->pDevice) != MA_SUCCESS) {
+                sound->state = Audio::finished;
+                return -2;
+            }
+            break;
+        case Audio::finished:
+            return 0;
+    }
+    sound->state = Audio::paused;
+    logu_("paused: %s\n", sound->filename);
+    return 0;
+}
+
+static int audio_lua_play(lua_State *L)
+{
+    sound_t* sound = (sound_t*)lua_topointer(L, lua_upvalueindex(1));
+    if (!sound) {
+        luaL_error(L, "sound object does not exist");
+    }
+    audio_play(sound);
+    return 0;
+}
+
+static int audio_lua_stop(lua_State *L)
+{
+    sound_t* sound = (sound_t*)lua_topointer(L, lua_upvalueindex(1));
+    if (!sound) {
+        luaL_error(L, "sound object does not exist");
+    }
+    audio_stop(sound);
+    return 0;
+}
+
+static int audio_lua_set_volume(lua_State *L)
+{
+    sound_t* sound = (sound_t*)lua_topointer(L, lua_upvalueindex(1));
+    if (!sound || !sound->pDevice) {
+        lua_pop(L, 1);
+        luaL_error(L, "sound object does not exist");
+    }
+    double volume = luaL_checknumber(L, 1);
+    lua_pop(L, 1);
+    if (volume < 0.0) {
+        volume = 0.0;
+    }
+    if (volume > 1.0) {
+        volume = 1.0;
+    }
+    ma_device_set_master_volume(sound->pDevice, volume);
+    return 0;
+}
+
+static int audio_lua_when_done(lua_State *L)
+{
+    sound_t* sound = (sound_t*)lua_topointer(L, lua_upvalueindex(1));
+    if (!sound || !sound->pDevice) {
+        lua_pop(L, 1);
+        luaL_error(L, "sound object does not exist");
+    }
+    if (!lua_isfunction(L, 1)) {
+        lua_pop(L, 1);
+        luaL_error(L, "first parameter must be a function");
+    }
+
+    lua_pushvalue(L, lua_upvalueindex(2)); // table
+    lua_pushvalue(L, -2); // callback function
+    lua_setfield(L, -2, "_callback");
+    lua_pop(L, 1);
+
+    lua_pushvalue(L, -1);
+    lua_xmove(L, _audio_L, 1);
+
+    extra_info_t* info = (extra_info_t*)malloc(sizeof(extra_info_t));
+    info->L = L;
+    info->callback_index = lua_gettop(_audio_L);
+    logu_("info->callback_index = %d\n", info->callback_index);
+
+    sound->extra = info;
+    lua_pop(L, 1);
+    return 0;
+}
+
+static int audio_lua_new(lua_State *L)
 {
     size_t len = 0;
     const char *filename = luaL_checklstring(L, 1, &len);
@@ -184,17 +301,43 @@ static int audio_new(lua_State *L)
         lua_pushstring(L, "filename cannot be empty");
         return 2;
     }
-
     lua_pop(L, 1);
+
+    sound_t* sound = audio_new_sound(filename);
+    if (!sound) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "unable to create new sound object for: %s", filename);
+        return 2;
+    }
+
     lua_newtable(L);
-    return 1;
+    lua_pushlightuserdata(L, sound);
+    lua_pushcclosure(L, audio_lua_play, 1);
+    lua_setfield(L, -2, "play");
+    lua_pushlightuserdata(L, sound);
+    lua_pushcclosure(L, audio_lua_set_volume, 1);
+    lua_setfield(L, -2, "set_volume");
+    lua_pushlightuserdata(L, sound);
+    lua_pushvalue(L, -2); // new table
+    lua_pushcclosure(L, audio_lua_when_done, 2);
+    lua_setfield(L, -2, "when_done");
+    lua_pushlightuserdata(L, sound);
+    lua_pushcclosure(L, audio_lua_stop, 1);
+    lua_setfield(L, -2, "stop");
+    // 2nd return value: no error
+    lua_pushnil(L);
+    return 2;
 }
 
 void init_audio_lib(lua_State *L)
 {
+    _audio_L = luaL_newstate();
+    //lua_pushvalue(L, -2);
+    //lua_remove(L, -3);
+
     lua_newtable(L);
     lua_pushstring(L, "new");
-    lua_pushcclosure(L, audio_new, 0);
+    lua_pushcclosure(L, audio_lua_new, 0);
     lua_settable(L, -3);
 }
 

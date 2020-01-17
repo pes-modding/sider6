@@ -1892,7 +1892,7 @@ bool module_trophy_rewrite(module_t *m, WORD tournament_id, WORD *new_tid)
         lua_pushinteger(L, tournament_id);
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n",
+            logu_("[%d] lua ERROR from module_trophy_rewrite: %s\n",
                 GetCurrentThreadId(), err);
         }
         else if (lua_isnumber(L, -1)) {
@@ -1903,6 +1903,19 @@ bool module_trophy_rewrite(module_t *m, WORD tournament_id, WORD *new_tid)
         LeaveCriticalSection(&_cs);
     }
     return assigned;
+}
+
+void module_call_callback_with_context(lua_State *L, lua_State *from_L, int callback_index) {
+    EnterCriticalSection(&_cs);
+    lua_pushvalue(from_L, callback_index);
+    lua_xmove(from_L, L, 1);
+    lua_pushvalue(L, 1); // ctx
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+        const char *err = luaL_checkstring(L, -1);
+        logu_("[%d] lua ERROR from module_call_callback_with_context: %s\n",
+            GetCurrentThreadId(), err);
+    }
+    LeaveCriticalSection(&_cs);
 }
 
 bool module_set_match_time(module_t *m, DWORD *num_minutes)
@@ -1917,7 +1930,7 @@ bool module_set_match_time(module_t *m, DWORD *num_minutes)
         lua_pushinteger(L, *num_minutes);
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_set_match_time: %s\n", GetCurrentThreadId(), err);
         }
         else if (lua_isnumber(L, -1)) {
             int value = luaL_checkinteger(L, -1);
@@ -1942,7 +1955,7 @@ bool module_set_stadium_choice(module_t *m, WORD stadium_id, WORD *new_stadium_i
         lua_pushinteger(L, stadium_id);
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_set_stadium_choice: %s\n", GetCurrentThreadId(), err);
         }
         else if (lua_isnumber(L, -1)) {
             *new_stadium_id = luaL_checkint(L, -1);
@@ -1977,7 +1990,7 @@ bool module_set_stadium(module_t *m, MATCH_INFO_STRUCT *mi)
         lua_setfield(L, -2, "season");
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_set_stadium: %s\n", GetCurrentThreadId(), err);
         }
         else if (lua_istable(L, -1)) {
             lua_getfield(L, -1, "stadium");
@@ -2016,7 +2029,7 @@ bool module_set_match_settings(module_t *m, MATCH_INFO_STRUCT *mi)
         lua_setfield(L, -2, "penalties");
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_set_match_settings: %s\n", GetCurrentThreadId(), err);
         }
         else if (lua_istable(L, -1)) {
             lua_getfield(L, -1, "difficulty");
@@ -2065,7 +2078,7 @@ bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
         lua_setfield(L, -2, "season");
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_set_conditions: %s\n", GetCurrentThreadId(), err);
         }
         else if (lua_istable(L, -1)) {
             lua_getfield(L, -1, "timeofday");
@@ -2106,7 +2119,7 @@ void module_after_set_conditions(module_t *m)
         lua_pushvalue(L, 1); // ctx
         if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_after_set_conditions: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
         }
         LeaveCriticalSection(&_cs);
@@ -2127,7 +2140,7 @@ void module_set_teams(module_t *m, DWORD home, DWORD away) //, TEAM_INFO_STRUCT 
         //lua_pushlightuserdata(L, away_team_info);
         if (lua_pcall(L, 3, 0, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_set_teams: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
         }
         LeaveCriticalSection(&_cs);
@@ -2147,7 +2160,7 @@ void module_set_home_team_for_kits(module_t *m, DWORD team_id, bool is_edit_mode
 
         if (lua_pcall(L, 3, 0, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_set_home_team_for_kits: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
         }
         LeaveCriticalSection(&_cs);
@@ -2167,7 +2180,7 @@ void module_set_away_team_for_kits(module_t *m, DWORD team_id, bool is_edit_mode
 
         if (lua_pcall(L, 3, 0, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_set_away_team_for_kits: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
         }
         LeaveCriticalSection(&_cs);
@@ -2203,7 +2216,7 @@ bool module_set_kits(module_t *m, MATCH_INFO_STRUCT *mi)
 
         if (lua_pcall(L, 3, 2, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_set_kits: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
             LeaveCriticalSection(&_cs);
             return false;
@@ -2236,7 +2249,7 @@ char *module_ball_name(module_t *m, char *name)
         lua_pushstring(L, name);
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_ball_name: %s\n", GetCurrentThreadId(), err);
         }
         else if (lua_isstring(L, -1)) {
             const char *s = luaL_checkstring(L, -1);
@@ -2263,7 +2276,7 @@ char *module_stadium_name(module_t *m, char *name, BYTE stadium_id)
         lua_pushinteger(L, stadium_id);
         if (lua_pcall(L, 3, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_stadium_name: %s\n", GetCurrentThreadId(), err);
         }
         else if (lua_isstring(L, -1)) {
             const char *s = luaL_checkstring(L, -1);
@@ -2291,7 +2304,7 @@ void module_overlay_on(module_t *m, char **text, char **image_path, struct layou
         lua_pushvalue(L, 1); // ctx
         if (lua_pcall(L, 1, 3, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR in overlay_on: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_overlay_on: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
         }
         else {
@@ -2375,7 +2388,7 @@ void module_key_down(module_t *m, int vkey)
         lua_pushinteger(L, vkey); // ctx
         if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_key_down: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
         }
         LeaveCriticalSection(&_cs);
@@ -2393,7 +2406,7 @@ void module_key_up(module_t *m, int vkey)
         lua_pushinteger(L, vkey); // ctx
         if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_key_up: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
         }
         LeaveCriticalSection(&_cs);
@@ -2416,7 +2429,7 @@ void module_gamepad_input(module_t *m, struct xi_change_t *changes, size_t len)
         }
         if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_gamepad_input: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
         }
         LeaveCriticalSection(&_cs);
@@ -2438,7 +2451,7 @@ void module_gamepad_input(module_t *m, struct xi_change_t *changes, size_t len)
             lua_pushinteger(L, vkey); // ctx
             if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
                 const char *err = luaL_checkstring(L, -1);
-                logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+                logu_("[%d] lua ERROR from module_gamepad_input (key-down): %s\n", GetCurrentThreadId(), err);
                 lua_pop(L, 1);
             }
             LeaveCriticalSection(&_cs);
@@ -2457,7 +2470,7 @@ char *module_rewrite(module_t *m, const char *file_name)
     lua_pushstring(L, file_name);
     if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
         const char *err = luaL_checkstring(L, -1);
-        logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+        logu_("[%d] lua ERROR from module_rewrite: %s\n", GetCurrentThreadId(), err);
     }
     else if (lua_isstring(L, -1)) {
         const char *s = luaL_checkstring(L, -1);
@@ -2487,7 +2500,7 @@ void module_read(module_t *m, const char *file_name, void *data, LONGLONG len, F
     }
     if (lua_pcall(L, 6, 0, 0) != LUA_OK) {
         const char *err = luaL_checkstring(L, -1);
-        logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+        logu_("[%d] lua ERROR from module_read: %s\n", GetCurrentThreadId(), err);
         lua_pop(L, 1);
     }
     LeaveCriticalSection(&_cs);
@@ -2507,7 +2520,7 @@ void module_data_ready(module_t *m, const char *file_name, void *data, LONGLONG 
     lua_pushinteger(L, offset);
     if (lua_pcall(L, 6, 0, 0) != LUA_OK) {
         const char *err = luaL_checkstring(L, -1);
-        logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+        logu_("[%d] lua ERROR from module_data_ready: %s\n", GetCurrentThreadId(), err);
         lua_pop(L, 1);
     }
     LeaveCriticalSection(&_cs);
@@ -2528,7 +2541,7 @@ void module_make_key(module_t *m, const char *file_name, char *key, size_t key_m
         lua_pushstring(L, file_name);
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n", GetCurrentThreadId(), err);
+            logu_("[%d] lua ERROR from module_make_key: %s\n", GetCurrentThreadId(), err);
             // fallback to filename
             strncat(key, file_name, maxlen);
         }
@@ -2561,7 +2574,7 @@ wchar_t *module_get_filepath(module_t *m, const char *file_name, char *key)
         lua_pushstring(L, (key[0]=='\0') ? NULL : key);
         if (lua_pcall(L, 3, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR: %s\n",
+            logu_("[%d] lua ERROR from module_get_filepath: %s\n",
                 GetCurrentThreadId(), err);
         }
         else if (lua_isstring(L, -1)) {
@@ -3536,6 +3549,7 @@ DWORD direct_input_poll(void *param) {
 HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
 {
     //logu_("Present called for swapChain: %p\n", swapChain);
+    //logu_("Present:: gettop: %d\n", lua_gettop(L));
 
     if (kb_handle == NULL && _config->_overlay_enabled) {
         kb_handle = SetWindowsHookEx(WH_KEYBOARD, sider_keyboard_proc, myHDLL, GetCurrentThreadId());
@@ -5373,6 +5387,10 @@ static void push_env_table(lua_State *L, const wchar_t *script_name)
     // z lib
     init_z_lib(L);
     lua_setfield(L, -2, "zlib");
+
+    // audio lib
+    init_audio_lib(L);
+    lua_setfield(L, -2, "audio");
 
     /*
     // gameplay lib
