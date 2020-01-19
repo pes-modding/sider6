@@ -22,7 +22,7 @@ void init_audio_lib(lua_State *L);
 
 // C API
 void audio_init();
-sound_t* audio_new_sound(const char* filename);
+sound_t* audio_new_sound(const char* filename, sound_t* sound);
 int audio_play(sound_t* sound);
 int audio_stop(sound_t* sound);
 

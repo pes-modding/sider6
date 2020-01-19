@@ -67,6 +67,9 @@ CRITICAL_SECTION _cs;
 CRITICAL_SECTION _tcs;
 lua_State *L = NULL;
 
+int _memory_lib_index = 0;
+int _audio_lib_index = 0;
+
 struct FILE_HANDLE_INFO {
     HANDLE handle;
     DWORD size;
@@ -5381,16 +5384,16 @@ static void push_env_table(lua_State *L, const wchar_t *script_name)
     lua_settable(L, -3);
 
     // memory lib
-    lua_pushvalue(L, 2);
+    lua_pushvalue(L, _memory_lib_index);
     lua_setfield(L, -2, "memory");
+
+    // audio lib
+    lua_pushvalue(L, _audio_lib_index);
+    lua_setfield(L, -2, "audio");
 
     // z lib
     init_z_lib(L);
     lua_setfield(L, -2, "zlib");
-
-    // audio lib
-    init_audio_lib(L);
-    lua_setfield(L, -2, "audio");
 
     /*
     // gameplay lib
@@ -5477,6 +5480,11 @@ void init_lua_support()
 
         // memory library
         init_memlib(L);
+        _memory_lib_index = lua_gettop(L);
+
+        // audio library
+        init_audio_lib(L);
+        _audio_lib_index = lua_gettop(L);
 
         // kmp_search function
         lua_pushcfunction(L, sider_kmp_search);
@@ -6701,7 +6709,7 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
                 fname += _config->_overlay_toggle_sound;
                 char *utf8filename = Utf8::unicodeToUtf8(fname.c_str());
 
-                sound_t* sound = audio_new_sound(utf8filename);
+                sound_t* sound = audio_new_sound(utf8filename, NULL);
                 if (sound) {
                     audio_play(sound);
                 }

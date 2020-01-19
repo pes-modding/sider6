@@ -36,6 +36,7 @@ struct extra_info_t {
 };
 
 lua_State *_audio_L;
+int _audio_callbacks_index = 0;
 
 class sound_tracker_t {
     std::deque<sound_t*> _dq;
@@ -140,17 +141,18 @@ void audio_init()
     }
 }
 
-sound_t* audio_new_sound(const char *filename)
+sound_t* audio_new_sound(const char *filename, sound_t *sound)
 {
     ma_result result;
     ma_decoder* pDecoder;
     ma_device* pDevice;
     ma_device_config deviceConfig;
-    sound_t* sound;
 
     pDevice = (ma_device*)malloc(sizeof(ma_device));
     pDecoder = (ma_decoder*)malloc(sizeof(ma_decoder));
-    sound = (sound_t*)malloc(sizeof(sound_t));
+    if (sound == NULL) {
+        sound = (sound_t*)malloc(sizeof(sound_t));
+    }
 
     result = ma_decoder_init_file(filename, NULL, pDecoder);
     if (result != MA_SUCCESS) {
@@ -186,6 +188,7 @@ int audio_play(sound_t* sound) {
     if (!sound || !sound->pDevice) {
         return -1;
     }
+    logu_("sound->pDecoder = %p\n", sound->pDecoder);
     switch (sound->state) {
         case Audio::created:
             _sound_tracker->add(sound);
@@ -222,64 +225,85 @@ int audio_stop(sound_t* sound) {
     return 0;
 }
 
+static sound_t* checksound(lua_State *L) {
+    void *ud = luaL_checkudata(L, 1, "Sider.sound");
+    luaL_argcheck(L, ud != NULL, 1, "'sound' expected");
+    return (sound_t*)ud;
+}
+
 static int audio_lua_play(lua_State *L)
 {
-    sound_t* sound = (sound_t*)lua_topointer(L, lua_upvalueindex(1));
-    if (!sound) {
-        luaL_error(L, "sound object does not exist");
-    }
+    sound_t* sound = checksound(L);
     audio_play(sound);
+    lua_pop(L, lua_gettop(L));
     return 0;
 }
 
 static int audio_lua_stop(lua_State *L)
 {
-    sound_t* sound = (sound_t*)lua_topointer(L, lua_upvalueindex(1));
-    if (!sound) {
-        luaL_error(L, "sound object does not exist");
-    }
+    sound_t* sound = checksound(L);
     audio_stop(sound);
+    lua_pop(L, lua_gettop(L));
     return 0;
 }
 
 static int audio_lua_set_volume(lua_State *L)
 {
-    sound_t* sound = (sound_t*)lua_topointer(L, lua_upvalueindex(1));
-    if (!sound || !sound->pDevice) {
-        lua_pop(L, 1);
-        luaL_error(L, "sound object does not exist");
-    }
-    double volume = luaL_checknumber(L, 1);
-    lua_pop(L, 1);
+    sound_t* sound = checksound(L);
+    double volume = luaL_checknumber(L, 2);
     if (volume < 0.0) {
         volume = 0.0;
     }
     if (volume > 1.0) {
         volume = 1.0;
     }
-    ma_device_set_master_volume(sound->pDevice, volume);
+    if (sound->pDevice) {
+        ma_device_set_master_volume(sound->pDevice, volume);
+    }
+    lua_pop(L, lua_gettop(L));
     return 0;
+}
+
+static int audio_lua_get_volume(lua_State *L)
+{
+    sound_t* sound = checksound(L);
+    lua_pop(L, lua_gettop(L));
+    float volume = 0.0f;
+    if (sound->pDevice) {
+        ma_device_get_master_volume(sound->pDevice, &volume);
+    }
+    lua_pushnumber(L, volume);
+    return 1;
+}
+
+static int audio_lua_get_filename(lua_State *L)
+{
+    sound_t* sound = checksound(L);
+    lua_pop(L, lua_gettop(L));
+    lua_pushstring(L, sound->filename);
+    return 1;
 }
 
 static int audio_lua_when_done(lua_State *L)
 {
-    sound_t* sound = (sound_t*)lua_topointer(L, lua_upvalueindex(1));
+    sound_t* sound = checksound(L);
     if (!sound || !sound->pDevice) {
-        lua_pop(L, 1);
+        lua_pop(L, lua_gettop(L));
         luaL_error(L, "sound object does not exist");
     }
-    if (!lua_isfunction(L, 1)) {
-        lua_pop(L, 1);
-        luaL_error(L, "first parameter must be a function");
+
+    if (!lua_isfunction(L, 2)) {
+        lua_pop(L, lua_gettop(L));
+        luaL_error(L, "expecting a function");
     }
 
-    lua_pushvalue(L, lua_upvalueindex(2)); // table
-    lua_pushvalue(L, -2); // callback function
-    lua_setfield(L, -2, "_callback");
-    lua_pop(L, 1);
+    lua_pushvalue(L, 1);
+    lua_pushvalue(L, 2);
+    lua_xmove(L, _audio_L, 2); // key/value pair: userdata --> callback function
+    lua_settable(_audio_L, _audio_callbacks_index);
 
-    lua_pushvalue(L, -1);
-    lua_xmove(L, _audio_L, 1);
+    lua_pushvalue(L, 2);
+    lua_xmove(L, _audio_L, 1); // store a copy in the stack too
 
     extra_info_t* info = (extra_info_t*)malloc(sizeof(extra_info_t));
     info->L = L;
@@ -287,7 +311,7 @@ static int audio_lua_when_done(lua_State *L)
     logu_("info->callback_index = %d\n", info->callback_index);
 
     sound->extra = info;
-    lua_pop(L, 1);
+    lua_pop(L, lua_gettop(L));
     return 0;
 }
 
@@ -303,41 +327,52 @@ static int audio_lua_new(lua_State *L)
     }
     lua_pop(L, 1);
 
-    sound_t* sound = audio_new_sound(filename);
+    sound_t* sound = (sound_t*)lua_newuserdata(L, sizeof(sound_t));
+    sound = audio_new_sound(filename, sound);
     if (!sound) {
         lua_pushnil(L);
         lua_pushfstring(L, "unable to create new sound object for: %s", filename);
         return 2;
     }
 
-    lua_newtable(L);
-    lua_pushlightuserdata(L, sound);
-    lua_pushcclosure(L, audio_lua_play, 1);
-    lua_setfield(L, -2, "play");
-    lua_pushlightuserdata(L, sound);
-    lua_pushcclosure(L, audio_lua_set_volume, 1);
-    lua_setfield(L, -2, "set_volume");
-    lua_pushlightuserdata(L, sound);
-    lua_pushvalue(L, -2); // new table
-    lua_pushcclosure(L, audio_lua_when_done, 2);
-    lua_setfield(L, -2, "when_done");
-    lua_pushlightuserdata(L, sound);
-    lua_pushcclosure(L, audio_lua_stop, 1);
-    lua_setfield(L, -2, "stop");
+    luaL_getmetatable(L, "Sider.sound");
+    lua_setmetatable(L, -2);
+
     // 2nd return value: no error
     lua_pushnil(L);
     return 2;
 }
 
+static const struct luaL_Reg audiolib_f [] = {
+    {"new", audio_lua_new},
+    {NULL, NULL}
+};
+
+static const struct luaL_Reg audiolib_m [] = {
+    {"play", audio_lua_play},
+    {"stop", audio_lua_stop},
+    {"set_volume", audio_lua_set_volume},
+    {"get_volume", audio_lua_get_volume},
+    {"get_filename", audio_lua_get_filename},
+    {"when_done", audio_lua_when_done},
+    {NULL, NULL}
+};
+
 void init_audio_lib(lua_State *L)
 {
-    _audio_L = luaL_newstate();
-    //lua_pushvalue(L, -2);
-    //lua_remove(L, -3);
+    // keep new state anchored.
+    // we will keep callbacks on its stack
+    _audio_L = lua_newthread(L);
+    lua_newtable(_audio_L);
+    _audio_callbacks_index = lua_gettop(_audio_L);
 
-    lua_newtable(L);
-    lua_pushstring(L, "new");
-    lua_pushcclosure(L, audio_lua_new, 0);
-    lua_settable(L, -3);
+    luaL_newmetatable(L, "Sider.sound");
+
+    lua_pushstring(L, "__index");
+    lua_pushvalue(L, -2);  /* pushes the metatable */
+    lua_settable(L, -3);  /* metatable.__index = metatable */
+
+    luaL_openlib(L, NULL, audiolib_m, 0);
+
+    luaL_openlib(L, "array", audiolib_f, 0);
 }
-
