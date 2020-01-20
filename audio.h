@@ -11,8 +11,6 @@ namespace Audio {
         playing,
         paused,
         finished,
-        fading_in,
-        fading_out,
     };
 }
 

@@ -27,6 +27,8 @@ struct sound_t {
     ma_device* pDevice;
     ma_decoder* pDecoder;
     int state;
+    bool fading;
+    float volume_delta;
     void* extra;
 };
 
@@ -124,8 +126,30 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
     //logu_("read %llu frames\n", n);
 
     if (n == 0 && p->state != Audio::finished) {
-        logu_("signaling finish event for sound object %p\n", p);
+        logu_("all samples played for sound object %p\n", p);
         p->state = Audio::finished;
+    }
+
+    if (p->fading) {
+        float volume;
+        if (ma_device_get_master_volume(pDevice, &volume) == MA_SUCCESS) {
+            volume = volume + p->volume_delta;
+            // make sure we clamp the volume
+            if (volume < 0.0) {
+                volume = 0.0f;
+                p->fading = false;
+                p->volume_delta = 0.0f;
+                logu_("sound object %p fully faded out\n", p);
+                p->state = Audio::finished;
+            }
+            else if (volume > 1.0) {
+                volume = 1.0f;
+                p->fading = false;
+                p->volume_delta = 0.0f;
+            }
+            //logu_("fading sound object %p. volume now: %0.3f\n", p, volume);
+            ma_device_set_master_volume(pDevice, volume);
+        }
     }
 
     (void)pInput;
@@ -157,7 +181,7 @@ sound_t* audio_new_sound(const char *filename, sound_t *sound)
     result = ma_decoder_init_file(filename, NULL, pDecoder);
     if (result != MA_SUCCESS) {
         logu_("ma_decoder_init_file failed\n");
-        free(sound);
+        //free(sound);
         return NULL;
     }
 
@@ -172,7 +196,7 @@ sound_t* audio_new_sound(const char *filename, sound_t *sound)
         logu_("Failed to open playback device.\n");
         ma_decoder_uninit(pDecoder);
         free(pDecoder);
-        free(sound);
+        //free(sound);
         return NULL;
     }
 
@@ -180,6 +204,8 @@ sound_t* audio_new_sound(const char *filename, sound_t *sound)
     sound->pDecoder = pDecoder;
     sound->pDevice = pDevice;
     sound->state = Audio::created;
+    sound->fading = false;
+    sound->volume_delta = 0.0f;
     sound->extra = NULL;
     return sound;
 }
@@ -188,7 +214,6 @@ int audio_play(sound_t* sound) {
     if (!sound || !sound->pDevice) {
         return -1;
     }
-    logu_("sound->pDecoder = %p\n", sound->pDecoder);
     switch (sound->state) {
         case Audio::created:
             _sound_tracker->add(sound);
@@ -284,6 +309,21 @@ static int audio_lua_get_filename(lua_State *L)
     return 1;
 }
 
+static int audio_lua_fade(lua_State *L)
+{
+    sound_t* sound = checksound(L);
+    float volume_delta = -0.005; // default delta: fade-out
+    if (lua_isnumber(L, 2)) {
+        volume_delta = lua_tonumber(L, 2);
+    }
+    lua_pop(L, lua_gettop(L));
+    if (sound->state != Audio::finished) {
+        sound->fading = true;
+        sound->volume_delta = volume_delta;
+    }
+    return 0;
+}
+
 static int audio_lua_when_done(lua_State *L)
 {
     sound_t* sound = checksound(L);
@@ -354,6 +394,7 @@ static const struct luaL_Reg audiolib_m [] = {
     {"set_volume", audio_lua_set_volume},
     {"get_volume", audio_lua_get_volume},
     {"get_filename", audio_lua_get_filename},
+    {"fade", audio_lua_fade},
     {"when_done", audio_lua_when_done},
     {NULL, NULL}
 };
