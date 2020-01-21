@@ -28,6 +28,8 @@ struct sound_t {
     ma_decoder* pDecoder;
     int state;
     bool fading;
+    bool fade_and_pause;
+    bool fade_and_finish;
     float fade_to_volume;
     ma_uint32 fade_in_samples;
     void* extra;
@@ -68,32 +70,40 @@ public:
             std::deque<sound_t*>::iterator it = _dq.begin();
             sound_t *p = *it;
             _dq.pop_front();
-            if (p->state == Audio::finished) {
-                // signalled: remove and destroy
-                logu_("sound object %p is done\n", p);
-                // check if there is a callback then call it
-                if (p->extra) {
-                    extra_info_t* info = (extra_info_t*)p->extra;
-                    if ((info->L) && (info->callback_index > 0)) {
-                        module_call_callback_with_context(info->L, _audio_L, info->callback_index);
+            switch (p->state) {
+                case Audio::finished:
+                    // signalled: remove and destroy
+                    logu_("sound object %p is done\n", p);
+                    // check if there is a callback then call it
+                    if (p->extra) {
+                        extra_info_t* info = (extra_info_t*)p->extra;
+                        if ((info->L) && (info->callback_index > 0)) {
+                            module_call_callback_with_context(info->L, _audio_L, info->callback_index);
+                        }
                     }
-                }
-                if (p->pDevice) {
-                    ma_device_uninit(p->pDevice);
-                    free(p->pDevice);
-                    p->pDevice = NULL;
-                }
-                if (p->pDecoder) {
-                    ma_decoder_uninit(p->pDecoder);
-                    free(p->pDecoder);
-                    p->pDecoder = NULL;
-                }
-                //free(p);
-            }
-            else {
-                // re-enqueue
-                _dq.push_back(p);
-                DBG(8192) logu_("sound object %p is not done yet\n", p);
+                    if (p->pDevice) {
+                        ma_device_uninit(p->pDevice);
+                        free(p->pDevice);
+                        p->pDevice = NULL;
+                    }
+                    if (p->pDecoder) {
+                        ma_decoder_uninit(p->pDecoder);
+                        free(p->pDecoder);
+                        p->pDecoder = NULL;
+                    }
+                    //free(p);
+                    break;
+                case Audio::pausing:
+                    logu_("sound object %p is paused\n", p);
+                    p->state = Audio::paused;
+                    if (p->pDevice) {
+                        ma_device_stop(p->pDevice);
+                    }
+                    // fall through to default, as we need to re-enqueue still
+                default:
+                    // re-enqueue
+                    _dq.push_back(p);
+                    DBG(8192) logu_("sound object %p is not done yet\n", p);
             }
         }
     }
@@ -139,9 +149,12 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
                 volume = p->fade_to_volume;
                 p->fading = false;
                 p->fade_in_samples = 0;
-                logu_("%llu: sound object %p fading finished\n", GetTickCount64(), p);
-                if (volume < 0.01) {
+                logu_("%llu: sound object %p finished fading\n", GetTickCount64(), p);
+                if (p->fade_and_finish) {
                     p->state = Audio::finished;
+                }
+                else if (p->fade_and_pause) {
+                    p->state = Audio::pausing;
                 }
             }
             else {
@@ -208,6 +221,8 @@ sound_t* audio_new_sound(const char *filename, sound_t *sound)
     sound->pDevice = pDevice;
     sound->state = Audio::created;
     sound->fading = false;
+    sound->fade_and_pause = false;
+    sound->fade_and_finish = false;
     sound->fade_to_volume = 0.0f;
     sound->fade_in_samples = 0;
     sound->extra = NULL;
@@ -235,7 +250,7 @@ int audio_play(sound_t* sound) {
     return 0;
 }
 
-int audio_stop(sound_t* sound) {
+int audio_pause(sound_t* sound) {
     if (!sound || !sound->pDevice) {
         return -1;
     }
@@ -254,26 +269,27 @@ int audio_stop(sound_t* sound) {
     return 0;
 }
 
+int audio_finish(sound_t* sound) {
+    if (!sound || !sound->pDevice) {
+        return -1;
+    }
+    switch (sound->state) {
+        case Audio::playing:
+            if (ma_device_stop(sound->pDevice) != MA_SUCCESS) {
+                sound->state = Audio::finished;
+                return -2;
+            }
+            break;
+    }
+    sound->state = Audio::finished;
+    logu_("finished: %s\n", sound->filename);
+    return 0;
+}
+
 static sound_t* checksound(lua_State *L) {
     void *ud = luaL_checkudata(L, 1, "Sider.sound");
     luaL_argcheck(L, ud != NULL, 1, "'sound' expected");
     return (sound_t*)ud;
-}
-
-static int audio_lua_play(lua_State *L)
-{
-    sound_t* sound = checksound(L);
-    audio_play(sound);
-    lua_pop(L, lua_gettop(L));
-    return 0;
-}
-
-static int audio_lua_stop(lua_State *L)
-{
-    sound_t* sound = checksound(L);
-    audio_stop(sound);
-    lua_pop(L, lua_gettop(L));
-    return 0;
 }
 
 static int audio_lua_set_volume(lua_State *L)
@@ -316,6 +332,10 @@ static int audio_lua_get_filename(lua_State *L)
 static int audio_lua_fade_to(lua_State *L)
 {
     sound_t* sound = checksound(L);
+    if (!sound->pDevice) {
+        lua_pop(L, lua_gettop(L));
+        return 0;
+    }
     float fade_to_volume = luaL_checknumber(L, 2);
     if (fade_to_volume > 1.0f) {
         fade_to_volume = 1.0f;
@@ -330,13 +350,72 @@ static int audio_lua_fade_to(lua_State *L)
             fade_sec = 0.001f;
         }
     }
-    lua_pop(L, lua_gettop(L));
     if (sound->state != Audio::finished) {
         sound->fading = true;
         sound->fade_to_volume = fade_to_volume;
         sound->fade_in_samples = fade_sec * sound->pDevice->sampleRate;
-        logu_("%llu: sound object %p fading started\n", GetTickCount64(), sound);
+        logu_("%llu: fading sound object %p\n", GetTickCount64(), sound);
     }
+    lua_pop(L, lua_gettop(L));
+    return 0;
+}
+
+static int audio_lua_play(lua_State *L)
+{
+    sound_t* sound = checksound(L);
+    if (!sound->pDevice) {
+        lua_pop(L, lua_gettop(L));
+        return 0;
+    }
+    // play
+    if (audio_play(sound) != 0) {
+        luaL_error(L, "problem playing sound object %p", sound);
+    }
+    sound->fade_and_pause = false;
+    sound->fade_and_finish = false;
+    lua_pop(L, lua_gettop(L));
+    return 0;
+}
+
+static int audio_lua_pause(lua_State *L)
+{
+    sound_t* sound = checksound(L);
+    if (!sound->pDevice) {
+        lua_pop(L, lua_gettop(L));
+        return 0;
+    }
+    if (!sound->fading) {
+        // pause now
+        if (audio_pause(sound) != 0) {
+            lua_pop(L, lua_gettop(L));
+            luaL_error(L, "problem pausing sound object %p", sound);
+        }
+        return 0;
+    }
+    sound->fade_and_pause = true;
+    sound->fade_and_finish = false;
+    lua_pop(L, lua_gettop(L));
+    return 0;
+}
+
+static int audio_lua_finish(lua_State *L)
+{
+    sound_t* sound = checksound(L);
+    if (!sound->pDevice) {
+        lua_pop(L, lua_gettop(L));
+        return 0;
+    }
+    if (!sound->fading) {
+        // finish now
+        if (audio_finish(sound) != 0) {
+            lua_pop(L, lua_gettop(L));
+            luaL_error(L, "problem finishing sound object %p", sound);
+        }
+        return 0;
+    }
+    sound->fade_and_pause = false;
+    sound->fade_and_finish = true;
+    lua_pop(L, lua_gettop(L));
     return 0;
 }
 
@@ -406,7 +485,8 @@ static const struct luaL_Reg audiolib_f [] = {
 
 static const struct luaL_Reg audiolib_m [] = {
     {"play", audio_lua_play},
-    {"stop", audio_lua_stop},
+    {"pause", audio_lua_pause},
+    {"finish", audio_lua_finish},
     {"set_volume", audio_lua_set_volume},
     {"get_volume", audio_lua_get_volume},
     {"get_filename", audio_lua_get_filename},
