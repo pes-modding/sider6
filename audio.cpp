@@ -28,7 +28,8 @@ struct sound_t {
     ma_decoder* pDecoder;
     int state;
     bool fading;
-    float volume_delta;
+    float fade_to_volume;
+    ma_uint32 fade_in_samples;
     void* extra;
 };
 
@@ -133,21 +134,23 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
     if (p->fading) {
         float volume;
         if (ma_device_get_master_volume(pDevice, &volume) == MA_SUCCESS) {
-            volume = volume + p->volume_delta;
-            // make sure we clamp the volume
-            if (volume < 0.0) {
-                volume = 0.0f;
+            if (p->fade_in_samples <= frameCount) {
+                // close enough
+                volume = p->fade_to_volume;
                 p->fading = false;
-                p->volume_delta = 0.0f;
-                logu_("sound object %p fully faded out\n", p);
-                p->state = Audio::finished;
+                p->fade_in_samples = 0;
+                logu_("%llu: sound object %p fading finished\n", GetTickCount64(), p);
+                if (volume < 0.01) {
+                    p->state = Audio::finished;
+                }
             }
-            else if (volume > 1.0) {
-                volume = 1.0f;
-                p->fading = false;
-                p->volume_delta = 0.0f;
+            else {
+                float rem_change = p->fade_to_volume - volume;
+                float volume_change = rem_change * (float)frameCount / p->fade_in_samples;
+                volume += volume_change;
+                p->fade_in_samples -= frameCount;
             }
-            //logu_("fading sound object %p. volume now: %0.3f\n", p, volume);
+            //logu_("fading sound object %p. (%d,%0.3f) volume now: %0.3f\n", p, frameCount, p->fade_in_samples, volume);
             ma_device_set_master_volume(pDevice, volume);
         }
     }
@@ -205,7 +208,8 @@ sound_t* audio_new_sound(const char *filename, sound_t *sound)
     sound->pDevice = pDevice;
     sound->state = Audio::created;
     sound->fading = false;
-    sound->volume_delta = 0.0f;
+    sound->fade_to_volume = 0.0f;
+    sound->fade_in_samples = 0;
     sound->extra = NULL;
     return sound;
 }
@@ -309,17 +313,29 @@ static int audio_lua_get_filename(lua_State *L)
     return 1;
 }
 
-static int audio_lua_fade(lua_State *L)
+static int audio_lua_fade_to(lua_State *L)
 {
     sound_t* sound = checksound(L);
-    float volume_delta = -0.005; // default delta: fade-out
-    if (lua_isnumber(L, 2)) {
-        volume_delta = lua_tonumber(L, 2);
+    float fade_to_volume = luaL_checknumber(L, 2);
+    if (fade_to_volume > 1.0f) {
+        fade_to_volume = 1.0f;
+    }
+    else if (fade_to_volume < 0.0f) {
+        fade_to_volume = 0.0f;
+    }
+    float fade_sec = 1.0; // default time: 1 sec
+    if (lua_isnumber(L, 3)) {
+        fade_sec = lua_tonumber(L, 3);
+        if (fade_sec < 0.001f) {
+            fade_sec = 0.001f;
+        }
     }
     lua_pop(L, lua_gettop(L));
     if (sound->state != Audio::finished) {
         sound->fading = true;
-        sound->volume_delta = volume_delta;
+        sound->fade_to_volume = fade_to_volume;
+        sound->fade_in_samples = fade_sec * sound->pDevice->sampleRate;
+        logu_("%llu: sound object %p fading started\n", GetTickCount64(), sound);
     }
     return 0;
 }
@@ -394,7 +410,7 @@ static const struct luaL_Reg audiolib_m [] = {
     {"set_volume", audio_lua_set_volume},
     {"get_volume", audio_lua_get_volume},
     {"get_filename", audio_lua_get_filename},
-    {"fade", audio_lua_fade},
+    {"fade_to", audio_lua_fade_to},
     {"when_done", audio_lua_when_done},
     {NULL, NULL}
 };
