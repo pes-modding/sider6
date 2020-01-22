@@ -26,15 +26,22 @@ h3 { color: #113399; text-decoration: underline; margin-top: 1.6em; }
 
 <h3>INTRODUCTION</h3>
 
-<p>The "LiveCPK" feature makes it possible to replace game content
+<p>Sider is a companion program for PES 2020 and PES 2020 Lite. It allows for
+small tweaks - such as "free side-select" (which is where sider gets its name from),
+time expander for the demo version. It also facilitates game mods, created by the
+modding community. The two main features are LiveCPK and the scripting engine, where you can write your
+own mods in Lua programming language.</p>
+
+<p>LiveCPK makes it possible to replace game content
 at run-time with content from files stored on disk, instead of
 having to pack everything into CPK-archives. (This feature
 is similar to Kitserver's AFS2FS and to FileLoader for earler
-versions of PES).</p>
+versions of PES). Depending on how and when exactly the game
+reads the replaced files, you can even live-edit some things,
+like textures or 3D models, without exiting the game.</p>
 
 <p>If you know a little bit how to program, you can write your own
-game logic using Sider's scripting engine, which uses Lua.
-This requires some reading and understanding of how the game
+game logic using Sider's scripting engine. This requires some reading and understanding of how the game
 works, but it's really not that hard ;-)
 See <a href="scripting.html">scripting.html</a>
 - for detailed documentation on that.</p>
@@ -58,7 +65,7 @@ case of sider, this is not a good way to organize things. In fact, it is a prett
 <ol>
 <li>you mix sider files with game files, and it can be tricky to
 remember which files belong to sider and which ones - to the game. Uninstalling
-sider than becomes more difficult.</li>
+sider then becomes more difficult.</li>
 <li>sider needs to create sider.log file and create and update various *.cache and *.ini files. If it has
 trouble doing so, due to folder permissions, it can lead to errors and crashes.
 <li>Steam may need/choose to "verify" game files, which can result in some of the
