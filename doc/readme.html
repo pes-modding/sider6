@@ -9,14 +9,14 @@ h4 { color: #660066; margin-top: 0.1em; }
 h3 { color: #113399; text-decoration: underline; margin-top: 1.6em; }
 .warn { color: #660000; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #880000; border-right: 0.5em solid #880000; background-color: #ccbbbb; }
 .note { color: #336600; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #336600; border-right: 0.5em solid #336600; background-color: #bbccbb; }
-.code { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5ff; font-family: monospace; font-size: 1.1em;
-    border-top: solid 1px #4477aa;
-    /*border-bottom: solid 1px #4477aa;*/
+pre { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5ff; font-family: monospace;
+    border-top: solid 1px #4477aa; font-size: 0.9em;
 }
-.user { font-weight: bold; color: #222222; }
+.user { font-weight: bold; color: #2255aa; }
 .soft { font-weight: bold; color: #336600; }
-.pathname { font-weight: normal; font-family: monospace; font-size: 1.3em; color: #336600; }
-.file { font-weight: normal; font-family: monospace; font-size: 1.3em; color: #660099; }
+.pathname { font-weight: normal; font-family: monospace; color: #336600; }
+.file { font-weight: normal; font-family: monospace; color: #660099; }
+a { color: #33f; }
 </style>
 </head>
 
@@ -121,7 +121,9 @@ contain some helpful information on what went wrong.</p>
 
 <p>There are several settings you can set in <span class="file">sider.ini</span>:</p>
 
-<p class="code">start.game = "steam://rungameid/996470"</p>
+<pre>
+start.game = "steam://rungameid/996470"
+</pre>
 
 <p>- optional setting. If it is specified, then Sider will
 operate in a new <b>"one-click launch" mode</b>: first, Sider will
@@ -131,7 +133,9 @@ the game process. After that, sider application will exit, but the
 game will continue with Sider activated - via <span class="file">sider.dll</span>.</p>
 
 
-<p class="code">exe.name = "\PES2020.exe"</p>
+<pre>
+exe.name = "\PES2020.exe"
+</pre>
 
 <p>- this sets the pattern(s) that the Sider program will use
 to identify which of the running processes is the game.
@@ -141,7 +145,9 @@ files with slightly different names that you use for
 online/offline play.</p>
 
 
-<p class="code">free.side.select = 1</p>
+<pre>
+free.side.select = 1
+</pre>
 
 <p>- enables free movement of controllers. Normally, it is
 only possible in Exhibition modes, but with this setting
@@ -156,13 +162,17 @@ or on the right. Otherwise, you will lose the control of the
 match. (default is: 0 - free movement disabled)</p>
 
 
-<p class="code">livecpk.enabled = 1</p>
+<pre>
+livecpk.enabled = 1
+</pre>
 
 <p>- Turns on the LiveCPK functionality of Sider. See below for a more
 detailed explanation in cpk.root option section.</p>
 
 
-<p class="code">debug = 0</p>
+<pre>
+debug = 0
+</pre>
 
 <p>- Setting this to values &gt; 0 will make Sider output some additional information
 into the log file (<span class="file">sider.log</span>). This is useful primarily for troubleshooting.
@@ -170,7 +180,9 @@ Extra logging may slow the game down, so normally you would want to keep
 this setting set to 0. (Defaults to 0: some info, but no extra output)</p>
 
 
-<p class="code">close.on.exit = 0
+<pre>
+close.on.exit = 0
+</pre>
 
 <p>- If this setting is set to 1, then Sider will close itself, when the
 game exits. This can be handy, if you use a batch file to start sider
@@ -178,14 +190,16 @@ automatically right before the game is launched.
 (Defaults to 0: do not close)</p>
 
 
-<p class="code">start.minimized = 0
+<pre>
+start.minimized = 0
+</pre>
 
 <p>- If you set this to 1, then Sider will start with a minimized window.
 Again, like the previous option, this setting can be helpful, if you
 use a batch file to auto-start sider, just before the game launches.
 (Defaults to 0: normal window)</p>
 
-<pre class="code">
+<pre>
 cpk.root = "c:\cpk-roots\balls-root"
 cpk.root = "c:\cpk-roots\kits-root"
 cpk.root = ".\another-root\stadiums"
@@ -206,14 +220,16 @@ Relative paths will be calculated relative to the folder where <span class="file
 located.</p>
 
 
-<p class="code">lua.enabled = 1</p>
+<pre>
+lua.enabled = 1
+</pre>
 
 <p>- This turns on/off the scripting support. Extension modules can be
 written in Lua 5.1 (LuaJIT), using a subset of standard libraries and
 also objects and events provides by sider. See <a href="scripting.html">scripting.html</a> for
 a programmer's guide to writing lua modules for sider.</p>
 
-<pre class="code">
+<pre>
 lua.module = "camera.lua"
 lua.module = "kitrewrite.lua"
 </pre>
@@ -221,13 +237,17 @@ lua.module = "kitrewrite.lua"
 <p>- Specifies the order in which the extension modules are loaded. These
 modules must be in "modules" folder inside the sider root directory.</p>
 
-<p class="code">jit.enabled = 1</p>
+<pre>
+jit.enabled = 1
+</pre>
 
 <p>- Allows to enable/disable JIT (Just-In-Time compiler) for Lua.
 By default, JIT is enabled - to provide performance boost for Lua modules.
 To turn it off, set to 0.</p>
 
-<p class="code">lua.gc.opt = "step"</p>
+<pre>
+lua.gc.opt = "step"
+</pre>
 
 - This option allows to tweak Lua garbage collector (GC) behaviour.
 Two supported values are: "step" - for incremental collection, and
@@ -235,7 +255,9 @@ Two supported values are: "step" - for incremental collection, and
 you do not need to modify this, unless you see Lua memory errors
 in the log. In which case, try "collect".
 
-<p class="code">overlay.enabled = 1</p>
+<pre>
+overlay.enabled = 1
+</pre>
 
 <p>- This option enables an interactive overlay. The overlay can display
 text that is provided by Lua modules, with one module having control
@@ -249,18 +271,22 @@ it needs to, or ignore them altogether. For more information, see
 <a href="scripting.html">scripting.html</a></p>
 
 
-<p class="code">overlay.on-from-start = 1</p>
+<pre>
+overlay.on-from-start = 1
+</pre>
 
 <p>- If set to 1, the overlay will appear as soon as possible, after
 the start of the game.
 (default is 0, meaning that overlay starts hidden, until toggled on)</p>
 
 
-<p class="code">overlay.location = "bottom"</p>
+<pre>
+overlay.location = "bottom"
+</pre>
 
 <p>- two possible locations: "top" and "bottom" of the screen</p>
 
-<pre class="code">
+<pre>
 overlay.font-size = 0
 overlay.font = "Consolas"
 </pre>
@@ -270,7 +296,7 @@ the font-size will be calculated automatically, based on height of
 the screen in pixels. Any TTF font installed on the system can be
 used, but monospaced fonts are recommended for easier formatting.</p>
 
-<pre class="code">
+<pre>
 overlay.vkey.toggle = 0x20
 overlay.vkey.next-module = 0x31
 </pre>
@@ -286,7 +312,7 @@ Full list of codes for all keys can be found here:
 <a href="https://docs.microsoft.com/en-us/windows/desktop/inputdev/virtual-key-codes">
 https://docs.microsoft.com/en-us/windows/desktop/inputdev/virtual-key-codes</a></p>
 
-<pre class="code">
+<pre>
 overlay.background-color = "102010c0"
 overlay.text-color = "80ff80c0"
 </pre>
@@ -295,7 +321,9 @@ overlay.text-color = "80ff80c0"
 done in HTML, except that you do not put '#' character in front)</p>
 
 
-<p class="code">overlay.image-alpha-max = 0.8</p>
+<pre>
+overlay.image-alpha-max = 0.8
+</pre>
 
 <p>- max value for alpha channel for the image displayed in the overlay
 (if there is one). This is useful, if you want the image to be slightly
@@ -307,7 +335,7 @@ Defaults to 1.0. The accepted range of values are: [0.0 - 1.0]
     <li>1.0 : original alpha channel of the image is kept unmodified.</li>
 </ul></p>
 
-<pre class="code">
+<pre>
 vkey.reload-1 = 0x10
 vkey.reload-2 = 0x52
 </pre>
@@ -321,7 +349,9 @@ allows to reload all modules that were modified since the last time
 they were loaded. Default is: Shift-R  (0x10 and 0x52).</p>
 
 
-<p class="code">game.priority.class = "above_normal"</p>
+<pre>
+game.priority.class = "above_normal"
+</pre>
 
 <p>- This option allows to change the priority of the game process. Sometimes
 this is useful, and reportedly can help to combat FPS drops. Supported values
