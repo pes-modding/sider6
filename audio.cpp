@@ -196,7 +196,7 @@ sound_t* audio_new_sound(const char *filename, sound_t *sound)
 
     result = ma_decoder_init_file(filename, NULL, pDecoder);
     if (result != MA_SUCCESS) {
-        logu_("ma_decoder_init_file failed\n");
+        logu_("ma_decoder_init_file failed for: %s\n", filename);
         //free(sound);
         return NULL;
     }

@@ -23,6 +23,7 @@ using namespace std;
 #define DEFAULT_OVERLAY_LOCATION 0
 #define DEFAULT_OVERLAY_VKEY_TOGGLE 0x20
 #define DEFAULT_OVERLAY_VKEY_NEXT_MODULE 0x31
+#define DEFAULT_OVERLAY_TOGGLE_SOUND L"toggle.wav"
 #define DEFAULT_VKEY_RELOAD_1 0x10 //Shift
 #define DEFAULT_VKEY_RELOAD_2 0x52 //R
 #define DEFAULT_GAMEPAD_STICK_SENSITIVITY 0.6
@@ -125,7 +126,7 @@ public:
                  _overlay_enabled(false),
                  _overlay_on_from_start(false),
                  _overlay_font(DEFAULT_OVERLAY_FONT),
-                 _overlay_toggle_sound(L""),
+                 _overlay_toggle_sound(DEFAULT_OVERLAY_TOGGLE_SOUND),
                  _overlay_text_color(DEFAULT_OVERLAY_TEXT_COLOR),
                  _overlay_background_color(DEFAULT_OVERLAY_BACKGROUND_COLOR),
                  _overlay_image_alpha_max(DEFAULT_OVERLAY_IMAGE_ALPHA_MAX),
