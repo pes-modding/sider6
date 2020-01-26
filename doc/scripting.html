@@ -4,10 +4,9 @@
 <style>
 body { margin-left: 1em; margin-right: 1em; margin-bottom: 2em; }
 body,h1,h2,h3,h4,h5,p,ol,ul,li,td,th { font-family: sans-serif; }
-h1 { margin-bottom: 0; }
+h1 { margin-bottom: 0; color: #000; }
 h4 { color: #660066; margin-top: 0.1em; margin-bottom: 0.1em; }
-h3 { color: #113399; text-decoration: underline; margin-top: 1.6em; }
-h5 { color: #113399; text-decoration: underline; margin-top: 1.6em; }
+h3 { color: #113399; text-decoration: underline; margin-top: 1.8em; }
 .warn { color: #660000; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #880000; border-right: 0.5em solid #880000; background-color: #ccbbbb; }
 .note { color: #336600; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #336600; border-right: 0.5em solid #336600; background-color: #bbccbb; }
 pre { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5ff; font-family: monospace;
@@ -23,20 +22,40 @@ pre { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5f
 .evt { font-weight: bold; font-family: monospace; }
 .evthdr { padding: 0 0 0 0.5em; border-left: 0.5em solid #bbb; background-color: #eee; margin-top: 1.5em; }
 a { color: #33f; }
+a.top { float: right; padding-top: 1em; }
 th { text-align: left; background-color: #d0ccdd; }
 th,td { border-top: 1px solid #888; padding: 0.2em 0.5em 0.5em 0.5em; }
-table.params tr th { font-weight: bold; font-family: monospace; background-color: #eee; color: #660099; }
 .last { border-bottom: 1px solid #888; }
+table.inputs { margin-left: 3em; }
+table.inputs tr th,td { border-left: 1px solid #888; }
+table.inputs tr th { font-weight: bold; font-family: sans-serif; background-color: #eee; color: #660099;
+    border-top: 1px solid #888; border-bottom: 1px solid #888; }
+table.inputs tr td { font-family: sans-serif; border-top: none; border-bottom: 1px solid #888; }
+table.inputs tr td.right,th.right { border-right: 1px solid #888; }
 </style>
 </head>
 
 <body>
-<!--<a href="sider.jpg"><img src="sider.jpg" width="100%"/></a>-->
-
 <h1>Sider 6 Lua Module Programmers Guide</h1>
 <h4>For sider.dll version: 6.3</h4>
 
+<p>
+<ol>
+<li><a href="#intro">Introduction</a></li>
+<li><a href="#module">Module structure</a></li>
+<li><a href="#context">Context object</a></li>
+<li><a href="#events">Supported events</a></li>
+<li><a href="#logging">Logging</a></li>
+<li><a href="#env">Module environment</a></li>
+<li><a href="#memory">Memory library</a></li>
+<li><a href="#zlib">Zlib library</a></li>
+</ol>
+</p>
+
+<a class="top" href="#">Top</a>
+<a name="intro">
 <h3>1. Introduction</h3>
+</a>
 
 <p>The main idea here is to provide a safe and flexible way to
 extend Sider functionality. It allows modders to alter many
@@ -64,7 +83,10 @@ often approaching and sometimes exceeding the speed of C code.</p>
 non-example) modules, which are provided with this release of Sider.
 Find them in the "modules" directory.</p>
 
+<a class="top" href="#">Top</a>
+<a name="module">
 <h3>2. Module structure</h3>
+</a>
 
 <p>If you are familiar with Lua and how modules are typically organized
 then this will make full sense to you. If are you new to Lua, i would
@@ -122,7 +144,10 @@ in paths. If you only have latin-1 chars, then ANSI is ok too.
 is to understand the context object (ctx).</p>
 
 
+<a class="top" href="#">Top</a>
+<a name="context">
 <h3>3. Context object</h3>
+</a>
 
 <p>Context object is what Sider knows about the current state
 of the game. As more scripts/modules are created by the community
@@ -205,18 +230,18 @@ Special values:
 </tr>
 <tr>
 <th>ctx.timeofday</th>
-<td>The values are: 0 - Day, 1 - Night. Same as with
+<td>The values are: 0 - day, 1 - night. Same as with
 stadium, it represents the time of day of the coming
 match, or the last one, if the stadium isn't set yet
 for the next match.</td>
 </tr>
 <tr>
 <th>ctx.season</th>
-<td>The values are: 0 - Summer, 1 - Winter.</td>
+<td>The values are: 0 - summer, 1 - winter.</td>
 </tr>
 <tr>
 <th>ctx.weather</th>
-<td>The values are: 0 - Fine, 1 - Rainy, 2 - Snowy</td>
+<td>The values are: 0 - fine, 1 - rainy, 2 - snowy</td>
 </tr>
 <tr>
 <th>ctx.weather_effects</th>
@@ -232,7 +257,7 @@ for the next match.</td>
 </tr>
 <tr>
 <th>ctx.difficulty</th>
-<td>Difficulty that was chosen: 0 - Beginner, 1 - Amateur, 2 - Professional, ...  5 - All-star, 6 - Legend</td>
+<td>Difficulty that was chosen: 0 - Beginner, 1 - Amateur, ...  5 - All-star, 6 - Legend</td>
 </tr>
 <tr>
 <th>ctx.extra_time</th>
@@ -354,8 +379,10 @@ depending on the value of the parameter:
 </ul>
 </p>
 
-
+<a class="top" href="#">Top</a>
+<a name="events">
 <h3>4. Supported events</h3>
+</a>
 
 <p class="evthdr">
 Event name: <span class="evt">"livecpk_make_key"</span><br />
@@ -598,414 +625,498 @@ stops further propagation of the event.
 For an example usage - see <span class="file">matchset.lua</span> module.
 </p>
 
-- Event name: "after_set_conditions"
-Handler function: f(ctx)
-Return value expected: nil
+<p class="evthdr">
+Event name: <span class="evt">"after_set_conditions"</span><br />
+Handler function: <span class="func">f(ctx)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
 
-This event fires after "set_conditions". It doesn't allow the handler
+<p>This event fires after "set_conditions". It doesn't allow the handler
 to change anything, but it does provide the context object so that the
-modules can react in whatever way they want.
+modules can react in whatever way they want.</p>
 
+<p class="evthdr">
+Event name: <span class="evt">"get_ball_name"</span><br />
+Handler function: <span class="func">f(ctx, ballname)</span><br />
+Return value expected: <span class="file">nil</span> or string
+</p>
 
--- Event name: "get_ball_name"
-Handler function: f(ctx, ballname)
-Return value expected: nil or string
-
-This event fires, when the game prepares to display the ball name.
+<p>This event fires, when the game prepares to display the ball name.
 Your handler function can change it, if it returns a string instead of nil.
 The string needs to be in UTF-8 encoding to correctly render non-ASCII
-characters.
+characters.</p>
 
+<p class="evthdr">
+Event name: <span class="evt">"get_stadium_name"<span><br />
+Handler function: <span class="func">f(ctx, stadium_name, stadium_id)<span><br />
+Return value expected: <span class="file">nil</span> or string
+</p>
 
--- Event name: "get_stadium_name"
-Handler function: f(ctx, stadium_name, stadium_id)
-Return value expected: nil or string
-
-This event fires, when the game prepares to display the stadium name.
+<p>This event fires, when the game prepares to display the stadium name.
 You handler function can change it, if it returns a string instead of nil.
 (The "stadium_id" parameter is provided to handler function only as additional
 information - for which stadium the name is being read/modified)
 The string needs to be in UTF-8 encoding to correctly render non-ASCII
-characters.
+characters.</p>
 
+<p class="evthdr">
+Event name: <span class="evt">"trophy_rewrite"<span><br />
+Handler function: <span class="func">f(ctx, tournament_id)<span><br />
+Return value expected: <span class="file">nil</span> or number
+</p>
 
--- Event name: "trophy_rewrite"
-Handler function: f(ctx, tournament_id)
-Return value expected: nil or number
-
-This event fires before the game checks if trophy scenes need to be shown
+<p>This event fires before the game checks if trophy scenes need to be shown
 before (and after) the match. This is a specialized event, and is probably
 not very useful for modules other than "trophy.lua". The "trophy.lua"
 uses to enforce trophy scenes from specific tournaments. This makes it
 possible to have trophy celebrations for tournaments that do not have
-them in the original game content. (See trophy.lua, if you are really
-interested in how this works)
+them in the original game content. (See <span class="file">trophy.lua</span>, if you are really
+interested in how this works)</p>
 
 
--- Event name: "overlay_on"
-Handler function: f(ctx)
-Return values expected: string, string, table
+<p class="evthdr">
+Event name: <span class="evt">"overlay_on"</span><br />
+Handler function: <span class="func">f(ctx)</span><br />
+Return values (3) expected: string, string, table
+</p>
 
-All return values can be nil, and also the handler may return three or two,
+<p>
+<a href="cap4.jpg"><img src="cap4.jpg" width="100%"/></a>
+</p>
+
+<p>All return values can be <span class="file">nil</span>, and also the handler may return three or two,
 or one, or not return anything at all.
-1st return value: text to display
-2nd return value: full filename of the image to display
-3rd return value: table with layout options
+<ul>
+<li>1st return value: text to display</li>
+<li>2nd return value: full filename of the image to display</li>
+<li>3rd return value: table with layout options</li>
+</ul>
+</p>
 
-When the overlay is on, and the current Lua module is in control of the
+<p>When the overlay is on, and the current Lua module is in control of the
 overlay, this event fires once for each frame that is displayed by the game engine
 (So, normally - 60 times per second). The returned string is what will be
 displayed by the overlay. The logic that generates this string should not be
 too heavy: too much processing may affect the frame rate.
-See examples in modules: overdemo.lua and camera.lua
+See examples in modules: <span class="file">overdemo.lua</span> and <span class="file">etrace.lua</span>
+</p>
 
-The text and image are displayed side by side: text - on the left,
+<p>The text and image are displayed side by side: text - on the left,
 image - on the right. The layout options table allows to specify some
-formatting for the image. The following ones are supported:
+formatting for the image. The following ones are supported:</p>
 
-    "image_width" : sets the width of the image on screen
-                    - values > 1 will be interpreted as desired width in pixels
-                    - values < 1 will be interpreted as fraction of the total
-                      screen width.
-    "image_height": sets the height of the image on screen
-                    - values > 1 will be interpreted as desired height in pixels
-                    - values < 1 will be interpreted as fraction of the total
-                      screen height.
-    "image_aspect_ratio": a floating point number (width/height).
-                          This options allows to enforce aspect ratio that is
-                          different from the source image. This value is NOT
-                          used if both image_width and image_height are specified.
-    "image_hmargin": whitespace margin in pixels to be placed to the left and to
-                     the right of the image.
-    "image_vmargin": whitespace margin in pixels to be placed to the top and to
-                     the bottom of the image.
+<ul>
+<li>"<b>image_width</b>" : sets the width of the image on screen</li>
+<ul>
+<li>values &gt; 1 will be interpreted as desired width in pixels</li>
+<li>values &lt; 1 will be interpreted as fraction of the total screen width.</li>
+</ul>
+<li>"<b>image_height</b>": sets the height of the image on screen
+<ul>
+<li>values &gt; 1 will be interpreted as desired height in pixels</li>
+<li>values &lt; 1 will be interpreted as fraction of the total screen height.</li>
+</ul>
+<li>"<b>image_aspect_ratio</b>": a floating point number (width/height).<br />
+This option allows to enforce aspect ratio that is
+different from the source image. This value is NOT
+used if both <b>image_width</b> and <b>image_height</b> are specified.</li>
+<li>"<b>image_hmargin</b>": whitespace margin in pixels to be placed to the left and to
+the right of the image.</li>
+<li>"<b>image_vmargin</b>": whitespace margin in pixels to be placed to the top and to
+the bottom of the image.</li>
+</ul>
 
-Final dimensions of the image on screen are calculated using two of the three
+<p>Final dimensions of the image on screen are calculated using two of the three
 options: "image_width", "image_height", "image_aspect_ratio" - in this order
 of priority. If only 1 (or none of the three) are specified, then a default
 width of 0.1 of total screen width is assumed, and the original aspect ratio
-of the image is used to calculate the height.
+of the image is used to calculate the height.</p>
 
-Transparency of overlay images can be controlled by "overlay.image-alpha-max"
-settings in sider.ini. This setting affects all modules and cannot be changed
-at runtime. See readme.txt for details on how this settings works.
+<p>Transparency of overlay images can be controlled by <b>overlay.image-alpha-max</b>
+settings in <span class="file">sider.ini</span>. This setting affects all modules and cannot be changed
+at runtime. See <a href="readme.html">readme.html</a> for details on how this settings works.
+</p>
 
+<p class="evthdr">
+Event name: <span class="evt">"key_down"</span><br />
+Handler function: <span class="func">f(ctx, vkey)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
 
--- Event name: "key_down"
-Handler function: f(ctx, vkey)
-Return value expected: nil
-
-When the overlay is on, and the current Lua module is in control of the
+<p>When the overlay is on, and the current Lua module is in control of the
 overlay, this event fires when user presses down any key on the keyboard. The
 so-called "virtual key code" will be passed as the value of "vkey" parameter.
 Your function can that take appropriate action, if it wants to react to
-such key events. A combination of "overlay_on" and "key_down" events can
+such key events. A combination of <span class="evt">"overlay_on"</span> and <span class="evt">"key_down"</span> events can
 be used to build simple UIs in the overlay itself.
-See example of such UI in camera.lua
+See example of such UI in <span class="file">camera.lua</span></p>
 
+<p class="evthdr">
+Event name: <span class="evt">"key_up"</span><br />
+Handler function: <span class="func">f(ctx, vkey)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
 
--- Event name: "key_up"
-Handler function: f(ctx, vkey)
-Return value expected: nil
-
-When the overlay is on, and the current Lua module is in control of the
+<p>When the overlay is on, and the current Lua module is in control of the
 overlay, this event fires when user releases a key on the keyboard. The
 so-called "virtual key code" will be passed as the value of "vkey" parameter.
 Your function can that take appropriate action, if it wants to react to
 such key events. (Typically, you would want to handle this event, if your
 module needs to avoid the standard "autorepeat" mechanism, where the
 operating system repeats "key_down" events when the key is held down.
-For "key_up" there is no autorepeat.)
+For <span class="evt">"key_up"</span> there is no autorepeat.)</p>
 
+<p class="evthdr">
+Event name: <span class="evt">"gamepad_input"</span><br />
+Handler function: <span class="func">f(ctx, inputs)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
 
--- Event name: "gamepad_input"
-Handler function: f(ctx, inputs)
-Return value expected: nil
-
-When the overlay is on, and the current Lua module is in control of the
+<p>When the overlay is on, and the current Lua module is in control of the
 overlay, this event fires when user presses or releases a button, or moves
 a stick or d-pad of the game controller. (If you have multiple controllers
 attached, only one will generate these input events). The "inputs" parameter
 is always a table containing at least one, but possibly more than one mapping
-of: input-name --> input-value. The "input-name" is a symbolic name that
+of: input-name --&gt; input-value. The "input-name" is a symbolic name that
 identifies the source of input: a button, stick, d-pad. See the following
-table for all possible combinations:
+table for all possible combinations:</p>
 
-    input               | input-name | input-values
-    --------------------+--------------+-----------------
-    Button 0            | A          | 0,1
-    Button 1            | B          | 0,1
-    Button 2            | X          | 0,1
-    Button 3            | Y          | 0,1
-    Button 4            | LB         | 0,1
-    Button 5            | RB         | 0,1
-    Button 6            | START      | 0,1
-    Button 7            | BACK       | 0,1
-    Button 8            | LT         | 0,1
-    Button 9            | RT         | 0,1
-    Button 10 (LS push) | LS         | 0,1
-    Button 11 (RS push) | RS         | 0,1
-    LS (left/right)     | LSx        | -1,0,1
-    LS (up/down)        | LSy        | -1,0,1
-    RS (left/right)     | RSx        | -1,0,1
-    RS (up/down)        | RSy        | -1,0,1
-    D-pad               | DPAD       | 0,1,9,8,10,2,6,4,5
+<p>
+<table class="inputs" cellpadding="0" cellspacing="0">
+<tr><th>input</th><th>input-name</th><th class="right">input-values</th></tr>
+<tr><td>Button 0            </td><td>A          </td><td class="right">0,1</td></tr>
+<tr><td>Button 1            </td><td>B          </td><td class="right">0,1</td></tr>
+<tr><td>Button 2            </td><td>X          </td><td class="right">0,1</td></tr>
+<tr><td>Button 3            </td><td>Y          </td><td class="right">0,1</td></tr>
+<tr><td>Button 4            </td><td>LB         </td><td class="right">0,1</td></tr>
+<tr><td>Button 5            </td><td>RB         </td><td class="right">0,1</td></tr>
+<tr><td>Button 6            </td><td>START      </td><td class="right">0,1</td></tr>
+<tr><td>Button 7            </td><td>BACK       </td><td class="right">0,1</td></tr>
+<tr><td>Button 8            </td><td>LT         </td><td class="right">0,1</td></tr>
+<tr><td>Button 9            </td><td>RT         </td><td class="right">0,1</td></tr>
+<tr><td>Button 10 (LS push) </td><td>LS         </td><td class="right">0,1</td></tr>
+<tr><td>Button 11 (RS push) </td><td>RS         </td><td class="right">0,1</td></tr>
+<tr><td>LS (left/right)     </td><td>LSx        </td><td class="right">-1,0,1</td></tr>
+<tr><td>LS (up/down)        </td><td>LSy        </td><td class="right">-1,0,1</td></tr>
+<tr><td>RS (left/right)     </td><td>RSx        </td><td class="right">-1,0,1</td></tr>
+<tr><td>RS (up/down)        </td><td>RSy        </td><td class="right">-1,0,1</td></tr>
+<tr><td>D-pad               </td><td>DPAD       </td><td class="right">0,1,9,8,10,2,6,4,5</td></tr>
+</table>
+</p>
 
-For buttons, 0: pressed, 1: pressed.
-For sticks, horizontal: -1: left, 0:middle, 1:right
-              vertical: -1: down, 0:middle, 1:up
-For D-pad, 0: not pressed, 1:up, 2:down, 4:left, 8:right
-    5:up/left, 6:down/left, 10:down/right, 9:up/right
+<ul>
+<li>For <b>buttons</b>, 0: pressed, 1: pressed.</li>
+<li>For <b>sticks</b>,
+<ul>
+<li>horizontal: -1: left, 0:middle, 1:right</li>
+<li>vertical: -1: down, 0:middle, 1:up</li>
+</ul>
+</li>
+<li>For <b>D-pad</b>, 0: not pressed, 1:up, 2:down, 4:left, 8:right, 
+5:up/left, 6:down/left, 10:down/right, 9:up/right</li>
+</ul>
 
-Best way to verify what names correspond to what buttons on your
-controller, is to try the "inputdemo.lua" from the modules folder.
+<p>Best way to verify what names correspond to what buttons on your
+controller, is to try the <span class="file">inputdemo.lua</span> from the modules folder.
 It uses overlay to display the last 20 input events - both from
-keyboard and from gamepad.
+keyboard and from gamepad.</p>
 
-If your module is registered for "key_down" event, but not for the
-"gamepad_input" event, then sider will automatically map gamepad events
+<p>If your module is registered for <span class="evt">"key_down"</span> event, but not for the
+<span class="evt">"gamepad_input"</span> event, then sider will automatically map gamepad events
 into keyboard events, and emit those, for such gamepad events that are
-defined in the "global input mapping" configuration - in gamepad.ini.
+defined in the "global input mapping" configuration - in <span class="file">gamepad.ini</span>.</p>
 
-If you do not want this automatic mapping, make sure to register for
-the "gamepad_input" event in your module, and then do whatever is needed
+<p>If you do not want this automatic mapping, make sure to register for
+the <span class="evt">"gamepad_input"</span> event in your module, and then do whatever is needed
 with the inputs. (You may choose to completely ignore them too, if you
-want. See example of that in camera.lua)
+want. See example of that in <span class="file">camera.lua</span>)</p>
 
-
-
+<p class="note">
 IMPORTANT NOTE: Some events can fire multiple times for the same "action".
 That is normal, it's just how the game works internally. Make sure your
 module logic can handle such situations correctly.
+</p>
 
 
+<a class="top" href="#">Top</a>
+<a name="logging">
+<h3>5. Logging</h3>
+</a>
 
-5. Logging
-~~~~~~~~~~
-
-Sider provides a function called "log". This can be used to print
-out any information you want into the sider.log file.
-You can use string.format to format your message in a way similar
+<p>Sider provides a function called <span class="func">log</span>. This can be used to print
+out any information you want into the <span class="file">sider.log</span> file.
+You can use <span class="func">string.format</span> to format your message in a way similar
 to what you would do with C printf:
 
+<pre>
 log(string.format("My value is: %0.5f", math.pi))
+</pre>
 
-In sider.log it will appear with a module name prefix, like as:
+In <span class="file">sider.log</span> it will appear with a module name prefix, like as:
 
-[<modulename>.lua] My value is: 3.14159
+<pre>
+[<i>modulename</i>.lua] My value is: 3.14159
+</pre>
 
 
+<a class="top" href="#">Top</a>
+<a name="env">
+<h3>6. Module environment</h3>
+</a>
 
-6. Module environment
-~~~~~~~~~~~~~~~~~~~~~
-
-Each module runs in its own environment. For detailed explanation
+<p>Each module runs in its own environment. For detailed explanation
 on what an environment is - read about Lua environments in the Lua
 manual online, or in Programming in Lua book. What is important
-here is that a module has access to a limited set of globals:
+here is that a module has access to a limited set of globals:</p>
 
-Standard Lua:
-    assert, ipairs, pairs, tostring, tonumber, table,
-    string, math, unpack, type, error, io, os, _VERSION, _G
-Sider:
-    log, memory, _FILE
+<p>
+Standard Lua:<br />
+<span class="func">assert, ipairs, pairs, tostring, tonumber, table,
+string, math, unpack, type, error, io, os, _VERSION, _G</span>
+</p>
+<p>
+Sider:<br />
+<span class="func">log, memory, _FILE</span>
+</p>
 
-You can also enable "ffi" and "bit" modules, which are LuaJIT
+<p>You can also enable "<b>ffi</b>" and "<b>bit</b>" modules, which are LuaJIT
 extensions. By default, they are disabled. To enable, modify your
-sider.ini like this:
+<span class="file">sider.ini</span> like this:</p>
 
+<pre>
 luajit.ext.enabled = 1
+</pre>
 
-By the way, your module can "investigate" and find out what exactly
+<p>By the way, your module can "investigate" and find out what exactly
 is available for it to use - this is not hard, and is left as an
-exercise for the reader ;-) Or... you can cheat, and look at env.lua
-module.
+exercise for the reader ;-) Or... you can cheat, and look at <span class="file">env.lua</span>
+module.</p>
 
 
+<a class="top" href="#">Top</a>
+<a name="memory">
+<h3>7. Memory library</h3>
+</a>
 
-7. Memory library
-~~~~~~~~~~~~~~~~~
+<p>The "memory" library provides a set of low-level functions that
+may prove useful if you're doing some advanced modding.</p>
 
-The "memory" library provides a set of low-level functions that
-may prove useful if you're doing some advanced modding.
-
-For example, you need some game state info that is not available in
+<p>For example, you need some game state info that is not available in
 sider's context object and isn't communicated through events either.
 Or you want to modify some bytes in memory, because you feel really
-adventurous.
+adventurous.</p>
 
 
-**********************************************************************
-**********************************************************************
-IMPORTANT WARNING: PLEASE USE THIS LIBRARY WITH CARE AND CAUTION,
+<p class="warn">
+<b>IMPORTANT WARNING:</b><br />
+USE THIS LIBRARY WITH CARE AND CAUTION,
 AND IF AND ONLY IF YOU KNOW WHAT YOU'RE DOING. REALLY.
-
 THESE ARE POWERFUL TOOLS, BUT THERE ARE ALSO DANGEROUS, BECAUSE
 WRITING INTO A WRONG PLACE IN MEMORY CAN HAVE DISASTROUS CONSEQUENCES.
 ALWAYS TRY TO HAVE A BACKUP COPY OF YOUR EDIT DATA AND SAVEGAME FILES.
-**********************************************************************
-**********************************************************************
+</p>
 
-
+<p class="func">
 memory.read(addr, n)
+</p>
 
-This function reads (n) bytes at memory address (addr).
-Return value: string of n bytes at given memory address
+<p class="desc">This function reads (n) bytes at memory address (addr).
+Return value: string of n bytes at given memory address</p>
 
-
+<p class="func">
 memory.write(addr, str)
+</p>
 
-This function writes the string of bytes (str) at the address (addr).
-Return value: nil
+<p class="desc">This function writes the string of bytes (str) at the address (addr).
+Return value: <span class="file">nil</span></p>
 
-
+<p class="func">
 memory.guard(addr, len, fmt, default_value)
+</p>
 
-This function first checks if the address "addr" contains the value
+<p class="desc">This function first checks if the address "addr" contains the value
 that matches the default_value given. (It automatically unpacks
 the byte sequence of length "len", using the format "fmt".)
 If the value checked does not match the "default_value", an error
-is raised.
+is raised.</p>
 
-Otherwise, the function returns a new object (table), which has
+<p>Otherwise, the function returns a new object (table), which has
 the "read" and "write" methods that can be used to read and
-modify the value at given address.
+modify the value at given address.</p>
 
-
+<p class="func">
 memory.search(str, start_addr, end_addr)
+</p>
 
-This function searches for the string of bytes (str), in the range
+<p class="desc">This function searches for the string of bytes (str), in the range
 of memory addresses between start_addr and end_addr.
 Return value: address, at which the string of bytes was found
-              or nil, if the string was not found.
+or <span class="file">nil</span>, if the string was not found.</p>
 
-
+<p class="func">
 memory.pack(format, number)
+</p>
 
-This function converts a Lua number into one of the supported binary
+<p class="desc">This function converts a Lua number into one of the supported binary
 formats (little endian). The "format" parameter is a string that should
 have one of the following values:
-"f"   : 32-bit float,
-"d"   : 64-bit double-precision float,
-"i64" : 64-bit signed integer,
-"u64" : 64-bit unsigned integer,
-"i32" : 32-bit signed integer,
-"u32" : 32-bit unsigned integer,
-"i16" : 16-bit signed integer,
-"u16" : 16-bit unsigned integer
-"i8"  : 8-bit signed integer [-127,127]
-"u8"  : 8-bit unsigned integer [0,255]
-"b"   : string of bytes
-"t"   : text string
+<ul>
+<li>"f"   : 32-bit float,</li>
+<li>"d"   : 64-bit double-precision float,</li>
+<li>"i64" : 64-bit signed integer,</li>
+<li>"u64" : 64-bit unsigned integer,</li>
+<li>"i32" : 32-bit signed integer,</li>
+<li>"u32" : 32-bit unsigned integer,</li>
+<li>"i16" : 16-bit signed integer,</li>
+<li>"u16" : 16-bit unsigned integer</li>
+<li>"i8"  : 8-bit signed integer [-127,127]</li>
+<li>"u8"  : 8-bit unsigned integer [0,255]</li>
+<li>"b"   : string of bytes</li>
+<li>"t"   : text string</li>
+</ul>
 Return value: string of bytes, representing the number in the format
-specified by the "format" parameter
+specified by the "format" parameter</p>
 
-
+<p class="func">
 memory.unpack(format, str)
+</p>
 
-This function converts a string of bytes (str) into a Lua number, using
+<p class="desc">This function converts a string of bytes (str) into a Lua number, using
 the format parameter to interpret the binary spec. The same values are
 supported for "format" param as in memory.pack function.
-Return value: a Lua number, converted from binary representation
+Return value: a Lua number, converted from binary representation</p>
 
-These last two functions (memory.pack/memory.unpack) are useful, when
+<p>These last two functions (memory.pack/memory.unpack) are useful, when
 used together with memory.read and memory.write, when you need to read
 and modify values in RAM and you know what binary formats are used for
-those values. See modules/memtest.lua - as the example module that
-demonstrates the usage.
+those values. See <span class="file">modules/memtest.lua</span> - as the example module that
+demonstrates the usage.</p>
 
-
+<p class="func">
 memory.hex(value)
+</p>
 
-Utility function to output value in hexadecimal format.
-Depending on the type of value, the output differs slightly:
+<p class="desc">Utility function to output value in hexadecimal format.
+Depending on the type of value, the output differs slightly:</p>
 
+<pre>
     local s = 'Football'
-    log(memory.hex(s))  --> prints "466f6f7462616c6c" in the log
+    log(memory.hex(s))  --&gt; prints "466f6f7462616c6c" in the log
+</pre>
 
+<pre>
     local n = 12345
-    log(memory.hex(n))  --> prints "0x3039" in the log
+    log(memory.hex(n))  --&gt; prints "0x3039" in the log
+</pre>
 
-
+<p class="func">
 memory.get_process_info()
+</p>
 
+<p class="desc">
 This function queries the game process (PES2020.exe) for information
-about where it is loaded in memory.
+about where it is loaded in memory.<br />
 Return value: a table containing at least two keys:
-    "base" - base address of the main process in memory
-    "sections" - a table of tables, with each member table containing
-                 at least these keys:
-         "name"   - name of the section
-         "start"  - starting address in memory
-         "finish" - first address beyond this section
+<ul>
+<li>"<b>base</b>" - base address of the main process in memory</li>
+<li>"<b>sections</b>" - a table of tables, with each member table containing
+at least these keys:
+<ul>
+<li>"<b>name</b>"   - name of the section
+<li>"<b>start</b>"  - starting address in memory
+<li>"<b>finish</b>" - first address beyond this section
+</ul>
+</ul>
+</p>
 
-
+<p class="func">
 memory.search_process(s)
+</p>
 
-This function searches for a string s in memory, but unlike memory.search
+<p class="desc">This function searches for a string s in memory, but unlike memory.search
 function, it does not take start and finish addresses. Instead, it searches
 the game process sections, one at a time, until it finds the string, or
-until all sections are examined.
+until all sections are examined.<br />
 Returns 2 values:
-    1) address of string s in memory, if found, or nil - otherwise
-    2) table with section info, in which the string was found.
+<ol>
+<li>address of string s in memory, if found, or <span class="file">nil</span> - otherwise</li>
+<li>table with section info, in which the string was found.</li>
+</ol>
+</p>
 
 
+<a class="top" href="#">Top</a>
+<a name="zlib">
+<h3>8. Zlib library</h3>
+</a>
 
-8. Zlib library
-~~~~~~~~~~~~~~~
-
-This library contains a small set of utility functons to work with
+<p>This library contains a small set of utility functons to work with
 compressed data. An example usage could be a combination of using a
-"livecpk_read" event to get the data, as it is read by the game, and
-then unpacking it, if it is compressed ("zlibbed").
+<span class="evt">"livecpk_data_ready"</span> event to get the data, as it is read by the game, and
+then unpacking it, if it is compressed ("zlibbed").</p>
 
-
+<p class="func">
 zlib.compress(data)
+</p>
 
-Takes the string of data and compresses it.
+<p class="desc">Takes the string of data and compresses it.<br />
 Returns 2 values:
-    1) string with compressed data, or nil - if an error occured
-    2) nil, or string with error message, if something went wrong
+<ol>
+<li>string with compressed data, or <span class="file">nil</span> - if an error occured</li>
+<li><span class="file">nil</span>, or string with error message, if something went wrong</li>
+</ol>
+</p>
 
-
+<p class="func">
 zlib.uncompress(compressed_data, uncompressed_size)
+</p>
 
-Decompresses the give string of data. The second parameter is
+<p class="desc">Decompresses the give string of data. The second parameter is
 optional: if you know the size of uncompressed data, then it is more
 efficient to provide it. If not, then uncompress will try a big
-enough buffer (3-times the size of compressed data)
+enough buffer (3-times the size of compressed data)<br />
 Returns 2 values:
-    1) string with uncompressed data, or nil - if an error occured
-    2) nil, or string with error message, if something went wrong
+<ol>
+<li>string with uncompressed data, or <span class="file">nil</span> - if an error occured</li>
+<li><span class="file">nil</span>, or string with error message, if something went wrong</li>
+</ol>
+</p>
 
-
+<p class="func">
 zlib.pack(data)
+</p>
 
-Creates a data structure that consists of "WESYS" header, used by
+<p class="desc">Creates a data structure that consists of "WESYS" header, used by
 Konami in PES games, followed by raw compressed data. The size of
 the WESYS header is 16 bytes, and its format is as follows:
-    bytes 0-2: magic bytes (version): 00 01 01
-    bytes 3-7: "WESYS"
-    bytes 8-11: compressed_size
-    bytes 12-15: uncompressed size
+<ul>
+<li>bytes 0-2: magic bytes (version): <tt>00 01 01</tt></li>
+<li>bytes 3-7: "WESYS"</li>
+<li>bytes 8-11: compressed size</li>
+<li>bytes 12-15: uncompressed size</li>
+</ul>
 Returns 2 values:
-    1) string containing the data structure, or nil - if an error occured
-    2) nil, or string with error message, if something went wrong
+<ol>
+<li>string containing the data structure, or <span class="file">nil</span> - if an error occured</li>
+<li><span class="file">nil</span>, or string with error message, if something went wrong</li>
+</ol>
+</p>
 
-
+<p class="func">
 zlib.unpack(data)
+</p>
 
-Checks if the input is in Konami format of WESYS header, followed
+<p class="desc">Checks if the input is in Konami format of WESYS header, followed
 by the compressed data. If so, it will try to uncompress the data,
 using the size information from the header. If the data is not in
-the expected format, then it is returned as is - unmodified.
+the expected format, then it is returned as is - unmodified.<br />
 Returns 2 values:
-    1) string containing uncompressed bytes, or original data,
-        if the input is not in WESYS-format, or nil, if some
-        error occured
-    2) nil, or string with error message, if an error occured.
-
+<ol>
+<li>string containing uncompressed bytes, or original data,
+if the input is not in WESYS-format, or <span class="file">nil</span>, if some error occured</li>
+<li><span class="file">nil</span>, or string with error message, if an error occured.</li>
+</ol>
+</p>
 
 </body>
 </html>
