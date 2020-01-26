@@ -8,6 +8,7 @@ h1 { margin-bottom: 0; color: #000; }
 h4 { color: #660066; margin-top: 0.1em; margin-bottom: 0.1em; }
 h3 { color: #113399; text-decoration: underline; margin-top: 1.8em; }
 .warn { color: #660000; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #880000; border-right: 0.5em solid #880000; background-color: #ccbbbb; }
+.gwarn { color: #666666; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #888888; border-right: 0.5em solid #888888; background-color: #cccccc; }
 .note { color: #336600; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #336600; border-right: 0.5em solid #336600; background-color: #bbccbb; }
 pre { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5ff; font-family: monospace;
     border-top: solid 1px #4477aa; font-size: 0.9em;
@@ -21,6 +22,7 @@ pre { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5f
 .kitattr { font-weight: normal; font-family: monospace; color: #000099; }
 .evt { font-weight: bold; font-family: monospace; }
 .evthdr { padding: 0 0 0 0.5em; border-left: 0.5em solid #bbb; background-color: #eee; margin-top: 1.5em; }
+.auf { font-weight: bold; color: #336600; }
 a { color: #33f; }
 a.top { float: right; padding-top: 1em; }
 th { text-align: left; background-color: #d0ccdd; }
@@ -49,6 +51,7 @@ table.inputs tr td.right,th.right { border-right: 1px solid #888; }
 <li><a href="#env">Module environment</a></li>
 <li><a href="#memory">Memory library</a></li>
 <li><a href="#zlib">Zlib library</a></li>
+<li><a href="#audio">Audio library</a></li>
 </ol>
 </p>
 
@@ -129,8 +132,8 @@ lua.module = "test.lua"
 the "init" function will be called, so you should see a "Hello, world!"
 message in <span class="file">sider.log</span>.
 If you made a mistake and your module has a syntax error, for example,
-or some other problem, don't panic, instead open <span class="file">sider.log</span> with Notepad 
-(or any text editor) and look for an error message there. It will explain 
+or some other problem, don't panic, instead open <span class="file">sider.log</span> with Notepad
+(or any text editor) and look for an error message there. It will explain
 where (on which line of your script) and what sort of problem occurred.</p>
 
 <p class="note">
@@ -812,7 +815,7 @@ table for all possible combinations:</p>
 <li>vertical: -1: down, 0:middle, 1:up</li>
 </ul>
 </li>
-<li>For <b>D-pad</b>, 0: not pressed, 1:up, 2:down, 4:left, 8:right, 
+<li>For <b>D-pad</b>, 0: not pressed, 1:up, 2:down, 4:left, 8:right,
 5:up/left, 6:down/left, 10:down/right, 9:up/right</li>
 </ul>
 
@@ -1117,6 +1120,93 @@ if the input is not in WESYS-format, or <span class="file">nil</span>, if some e
 <li><span class="file">nil</span>, or string with error message, if an error occured.</li>
 </ol>
 </p>
+
+<a class="top" href="#">Top</a>
+<a name="audio">
+<h3>9. Audio library</h3>
+</a>
+
+<p>This library provides support for playing music and sound effects, which exist completely
+outside of the game files. Sounds are not loaded to replace existing ones, but instead you
+can load audio of any length and play it at any time, at any volume, using all the information
+and events that Sider scripting engine provides.
+Audio formats supported are: <span class="auf">WAVE</span>, <span class="auf">MP3</span> and <span class="auf">FLAC</span>.
+Simple effects, such as <b>fade-in</b> and <b>fade-out</b>
+are supported, as well as a way to <b>change volume</b> and <b>pause/resume</b> a playing sound.
+See examples further down on how to accomplish these things, and also consult
+<span class="file">audiodemo.lua</span> example module.</p>
+
+<p class="func"><i>obj</i> = audio.new(filename)</p>
+
+<p class="desc">This function creates a new sound object and returns it as a value of Lua type "userdata".
+The filename parameter must contain the full pathname to the sound file. All subsequent operations are done
+on this sound object. Let's see some of them.</p>
+
+<p class="func"><i>obj</i>:play()</p>
+
+<p class="desc">Start playing the sound. Notice that we use of the ":" symbol, which is a usual way
+that methods on objects are called in Lua. The "play" method will return right way, regardless of how long the
+duration of the sound is. It will continue playing in the background, until it finishes, or is stopped,
+paused, faded-out at a later time.</p>
+
+<p>Here is the simplest example of how to play a sound effect:
+<pre>
+local s = audio.new("c:\\my-sounds\\ping.wav")
+s:play()
+</pre>
+
+<p class="gwarn">IMPORTANT NOTE: Due to implementation details of the audio library, you cannot create sound objects in the
+module's "init" function. If you try that, the "init" function will just hang and never return, blocking
+the game from even starting. Creating sound objects in all other event handler functions is totally fine.</p>
+
+<p class="note"><b>Sound object lifetime</b><br /><br />
+If you play a short sound effect and do not need to do anything with it afterwards, then using a local
+variable - like in the code above - is fine. However, if you want to affect the play later on, for example: change
+its volume, or pause it, fade out/fade back in, then you need to store the sound object in a non-local variable. You can do
+that using a module-level variable, or store sound object a non-local table. We will see an example of doing that
+in the next code snippet below.</p>
+
+<p class="func"><i>obj</i>:set_volume(volume)</p>
+
+<p class="desc">Sets the volume for the sound. The "volume" parameter is a float in the ranging from 0.0 (no sound)
+to 1.0 (full volume). If you call this on an object that is already playing, the volume will change immediately.</p>
+
+<p><b>Example module: audio1.lua</b>
+<pre>
+local m = {}
+
+-- place where we keep our sound files
+local content_root = ".\\content\\my-audio\\"
+
+-- module-level variable to keep reference to our sound object
+local s
+
+function m.set_stadium_choice(ctx, stadium_choice)
+    s = audio.new(content_root .. "mysound.mp3")
+    s:set_volume(0.8)
+    s:play()
+end
+
+function m.init(ctx)
+    -- make content_root and absolute path,
+    -- now that sider_dir is available in the context
+    content_root = ctx.sider_dir .. content_root
+
+    -- register event handlers
+    ctx.register("set_stadium_choice", m.set_stadium_choice)
+end
+
+return m
+</pre>
+</p>
+
+<p class="func"><i>obj</i>:get_volume()</p>
+
+<p class="desc">Returns the current volume of the sound object, as a float in the range of [0.0, 1.0]</p>
+
+<p class="func"><i>obj</i>:get_filename()</p>
+
+<p class="desc">Returns the full filename of the sound file that was given when the sound object was created</p>
 
 </body>
 </html>
