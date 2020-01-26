@@ -870,16 +870,16 @@ manual online, or in Programming in Lua book. What is important
 here is that a module has access to a limited set of globals:</p>
 
 <p>
-Standard Lua:<br />
+standard Lua provides:<br />
 <span class="func">assert, ipairs, pairs, tostring, tonumber, table,
 string, math, unpack, type, error, io, os, _VERSION, _G</span>
 </p>
 <p>
-Sider:<br />
+sider adds:<br />
 <span class="func">log, memory, _FILE</span>
 </p>
 
-<p>You can also enable "<b>ffi</b>" and "<b>bit</b>" modules, which are LuaJIT
+<p>You can also enable <span class="func">ffi</span> and <span class="func">bit</span> modules, which are LuaJIT
 extensions. By default, they are disabled. To enable, modify your
 <span class="file">sider.ini</span> like this:</p>
 
