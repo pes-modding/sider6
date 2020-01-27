@@ -24,6 +24,7 @@ using namespace std;
 #define DEFAULT_OVERLAY_VKEY_TOGGLE 0x20
 #define DEFAULT_OVERLAY_VKEY_NEXT_MODULE 0x31
 #define DEFAULT_OVERLAY_TOGGLE_SOUND L"toggle.wav"
+#define DEFAULT_OVERLAY_TOGGLE_SOUND_VOLUME 1.0f
 #define DEFAULT_VKEY_RELOAD_1 0x10 //Shift
 #define DEFAULT_VKEY_RELOAD_2 0x52 //R
 #define DEFAULT_GAMEPAD_STICK_SENSITIVITY 0.6
@@ -61,6 +62,7 @@ public:
     bool _overlay_on_from_start;
     wstring _overlay_font;
     wstring _overlay_toggle_sound;
+    float _overlay_toggle_sound_volume;
     DWORD _overlay_text_color;
     DWORD _overlay_background_color;
     float _overlay_image_alpha_max;
@@ -127,6 +129,7 @@ public:
                  _overlay_on_from_start(false),
                  _overlay_font(DEFAULT_OVERLAY_FONT),
                  _overlay_toggle_sound(DEFAULT_OVERLAY_TOGGLE_SOUND),
+                 _overlay_toggle_sound_volume(DEFAULT_OVERLAY_TOGGLE_SOUND_VOLUME),
                  _overlay_text_color(DEFAULT_OVERLAY_TEXT_COLOR),
                  _overlay_background_color(DEFAULT_OVERLAY_BACKGROUND_COLOR),
                  _overlay_image_alpha_max(DEFAULT_OVERLAY_IMAGE_ALPHA_MAX),
@@ -243,6 +246,12 @@ public:
                 float alpha = 1.0f;
                 if (swscanf(value.c_str(),L"%f",&alpha)==1) {
                     _overlay_image_alpha_max = min(1.0f, max(0.0f, alpha));
+                }
+            }
+            else if (wcscmp(L"overlay.toggle.sound-volume", key.c_str())==0) {
+                float volume;
+                if (swscanf(value.c_str(),L"%f",&volume)==1) {
+                    _overlay_toggle_sound_volume = min(1.0f, max(0.0f, volume));
                 }
             }
             else if (wcscmp(L"overlay.location", key.c_str())==0) {

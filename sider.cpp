@@ -5873,6 +5873,8 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"overlay.font-size = %d\n", _config->_overlay_font_size);
     log_(L"overlay.vkey.toggle = 0x%02x\n", _config->_overlay_vkey_toggle);
     log_(L"overlay.vkey.next-module = 0x%02x\n", _config->_overlay_vkey_next_module);
+    log_(L"overlay.toggle.sound = %s\n", _config->_overlay_toggle_sound.c_str());
+    log_(L"overlay.toggle.sound-volume = %0.2f\n", _config->_overlay_toggle_sound_volume);
     log_(L"vkey.reload-1 = 0x%02x\n", _config->_vkey_reload_1);
     log_(L"vkey.reload-2 = 0x%02x\n", _config->_vkey_reload_2);
     log_(L"close.on.exit = %d\n", _config->_close_sider_on_exit);
@@ -6711,6 +6713,7 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
 
                 sound_t* sound = audio_new_sound(utf8filename, NULL);
                 if (sound) {
+                    audio_set_volume(sound, _config->_overlay_toggle_sound_volume);
                     audio_play(sound);
                 }
                 Utf8::free(utf8filename);

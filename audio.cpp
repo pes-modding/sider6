@@ -290,6 +290,16 @@ int audio_finish(sound_t* sound) {
     return 0;
 }
 
+int audio_set_volume(sound_t *sound, float volume) {
+    if (sound && sound->pDevice) {
+        if (sound->state != Audio::finished) {
+            ma_device_set_master_volume(sound->pDevice, volume);
+            return 0;
+        }
+    }
+    return -1;
+}
+
 static sound_t* checksound(lua_State *L) {
     void *ud = luaL_checkudata(L, 1, "Sider.sound");
     luaL_argcheck(L, ud != NULL, 1, "'sound' expected");
