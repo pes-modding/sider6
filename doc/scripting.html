@@ -450,6 +450,7 @@ Return value: <span class="file">nil</span>.
 <p>Provides a pointer to the buffer in memory that have just
 been filled with data. Here is what the parameters mean:
 <ul>
+<li>ctx: context object</li>
 <li>filename: the relative pathname of the file (For example, "common\pesdb\etc\Team.bin")</li>
 <li>data: address of the buffer in memory where the data was loaded</li>
 <li>size: buffer length in bytes</li>
@@ -1145,7 +1146,7 @@ on this sound object. Let's see some of them.</p>
 <p class="func"><i>obj</i>:play()</p>
 
 <p class="desc">Start playing the sound. Notice that we use of the ":" symbol, which is a usual way
-that methods on objects are called in Lua. The "play" method will return right way, regardless of how long the
+that methods on objects are called in Lua. The "play" method will return immediately, regardless of how long the
 duration of the sound is. It will continue playing in the background, until it finishes, or is stopped,
 paused, faded-out at a later time.</p>
 
@@ -1176,13 +1177,13 @@ to 1.0 (full volume). If you call this on an object that is already playing, the
 local m = {}
 
 -- place where we keep our sound files
-local content_root = ".\\content\\my-audio\\"
+local content_root = ".\\content\\audio-demo\\"
 
 -- module-level variable to keep reference to our sound object
 local s
 
 function m.set_stadium_choice(ctx, stadium_choice)
-    s = audio.new(content_root .. "mysound.mp3")
+    s = audio.new(content_root .. "sample.wav")
     s:set_volume(0.8)
     s:play()
 end
@@ -1207,6 +1208,239 @@ return m
 <p class="func"><i>obj</i>:get_filename()</p>
 
 <p class="desc">Returns the full filename of the sound file that was given when the sound object was created</p>
+
+<p class="func"><i>obj</i>:pause()</p>
+
+<p class="desc">Pauses a playing sound. You can resume it again by calling <span class="func"><i>obj</i>:play()</span> again.
+If the fade-out effect has been set (with a call to <span class="func">fade_to</span> method before <span class="func">pause</span>),
+then the sound will be paused after the volume fading finishes.
+</p>
+
+<p class="func"><i>obj</i>:finish()</p>
+
+<p class="desc">Stops a playing sound. There is no way to resume it. If you want to play the same sound again, then you
+need to create a new sound object with <span class="func">audio.new(filename)</span>.
+If the fade-out effect has been set (with a call to <span class="func">fade_to</span> method before <span class="func">finish</span>),
+then the sound will be stopped after the volume fading finishes.</p>
+
+<p class="func"><i>obj</i>:fade_to(volume, in_seconds)</p>
+
+<p class="desc">Fade the volume from the current level to the level specified by "volume" parameter, over the time period specified
+by "in_seconds" parameter. Note that fading starts immediately only if the sound is already playing. If the sound hasn't been started
+yet or is currently paused, then the fading will begin after <span class="func">play</span> method is called.
+<ul>
+<li>volume: target volume in the range of [0.0, 1.0]</li>
+<li>in_seconds: how long to do the volume fading for. You can specify fractions of a second here too - for example, 2.5 is perfectly fine.</li>
+</ul>
+</p>
+
+<p class="func"><i>obj</i>:when_done(func)</p>
+
+<p class="desc">This method allows to run some code - a function specified by "func" parameter -
+immediately after the sound finishes playing, either because of playing out in its entirety or due to being stopped by
+a call to <span class="func">finish</span> method. This allows for things like playing a sequence of multiple sounds,
+following one another, or just in general running any logic that needs to be done after a sound finishes playing.</p>
+
+<p>Now let's see some examples of fade-in/fade-out effects. We will create a module that plays one sound, when user
+presses "[5]" button, then cross-fades another sound, when user presses "[6]" button.</p>
+
+<p><b>Example: audio2.lua</b>
+
+<pre>
+local m = {}
+
+local sound
+local sound2
+
+function m.key_up(ctx, vkey)
+    if vkey == 0x35 then
+        sound = audio.new(ctx.sider_dir .. "content\\audio-demo\\uefa.mp3")
+        sound:play()
+
+    elseif vkey == 0x36 then
+        -- do a cross-fade from one sound to another
+        sound:fade_to(0, 3.5) -- fade-out in 3.5 seconds
+        sound:finish()
+
+        sound2 = audio.new(ctx.sider_dir .. "content\\audio-demo\\sample.wav")
+        sound2:set_volume(0)   -- start from 0 volume
+        sound2:fade_to(1, 2.5) -- fade in in 2.5 seconds
+        sound2:play()
+    end
+end
+
+function m.overlay_on(ctx)
+    return "press [5] - to play music, [6] - to crossfade to another sound"
+end
+
+function m.init(ctx)
+    ctx.register("key_up", m.key_up)
+    ctx.register("overlay_on", m.overlay_on)
+end
+
+return m
+</pre>
+</p>
+
+<p>Another, a little longer example: let's start some music, when user presses ["5"] button. During a match, if we press Start button
+to pause the game, let's have the music fade out. Then when the user resumes the game, fade the music back in.</p>
+
+<p><b>Example: audio3.lua</b>
+<pre>
+local m = {}
+
+local sound
+local volume
+
+local function pause_sound()
+    if sound then
+        -- remember volume of this sound, so that we can resume playback later at the same volume
+        volume = sound:get_volume()
+        -- pause with 2.5 second fade-out
+        sound:fade_to(0, 2.5)
+        sound:pause()
+    end
+end
+
+local function resume_sound()
+    if sound then
+        -- resume play with 2.5 second fade-in
+        sound:fade_to(volume, 2.5)
+        sound:play()
+    end
+end
+
+function m.data_ready(ctx, filename)
+    if filename == "common\\script\\flow\\Match\\MatchPrePause.json" then
+        log("game loaded: " .. filename)
+        -- pause sound when Pause Menu shows up
+        pause_sound()
+
+    elseif filename == "common\\script\\flow\\Match\\MatchPostPause.json" then
+        log("game loaded: " .. filename)
+        -- resume sound, when Pause Menu exits
+        resume_sound()
+
+    end
+end
+
+function m.key_up(ctx, vkey)
+    if vkey == 0x35 then
+        if sound then
+            -- already playing. Let's stop it
+            sound:finish()
+        else
+            -- not playing: Let's start a new sound
+            sound = audio.new(ctx.sider_dir .. "content\\audio-demo\\uefa.mp3")
+            sound:set_volume(0.7)
+            sound:when_done(function(ctx)
+                -- we are finished playing: set sound non-local var back to nil
+                sound = nil
+            end)
+            sound:play()
+        end
+    end
+end
+
+function m.overlay_on(ctx)
+    return "press [5] to play music"
+end
+
+function m.init(ctx)
+    ctx.register("livecpk_data_ready", m.data_ready)
+    ctx.register("key_up", m.key_up)
+    ctx.register("overlay_on", m.overlay_on)
+end
+
+return m
+</pre>
+</p>
+
+<p>Let's see an example of 3-sound sequence:</p>
+
+<p><b>Example: audio4.lua</b>:
+
+<pre>
+local m = {}
+
+-- we will keep references to sound objects in this table
+local sounds = {}
+
+function m.key_up(ctx, vkey)
+    if vkey == 0x35 then
+        local s1 = audio.new(ctx.sider_dir .. "content\\audio-demo\\sample.wav")
+        s1:when_done(function(ctx)
+            sounds[s1] = nil
+            local s2 = audio.new(ctx.sider_dir .. "content\\audio-demo\\uefa.mp3")
+            s2:when_done(function(ctx)
+                sounds[s2] = nil
+                local s3 = audio.new(ctx.sider_dir .. "content\\audio-demo\\toggle.wav")
+                s3:when_done(function(ctx)
+                    sounds[s3] = nil
+                    log("sequence done playing")
+                end)
+                sounds[s3] = true
+                s3:play()
+            end)
+            sounds[s2] = true
+            s2:play()
+        end)
+        sounds[s1] = true
+        s1:play()
+        log("sequence started playing")
+    end
+end
+
+function m.overlay_on(ctx)
+    return "press [5] to play a sequence of sounds"
+end
+
+function m.init(ctx)
+    ctx.register("key_up", m.key_up)
+    ctx.register("overlay_on", m.overlay_on)
+end
+
+return m
+</pre>
+</p>
+
+<p><img src="cr7.jpg" style="float: left; padding: 0 1em 1em 0;" height="150" />
+One last example is a sort of a fun one. It plays Cristiano Ronaldo's "suuu!" shout, when he scores a goal.
+The sound effect is triggered, when the game loads a specific animation file. The MP3 file has 5 seconds of silence,
+followed by the shout. It is not perfect in terms of syncing animation and sound, but it works pretty well
+most of the times. Just another demonstration of what the audio library can do for you, when used together
+with the rest of the Sider's Lua scripting engine.</p>
+
+<p style="clear:both"><b>Example: cr7_audio.lua</b>:
+
+<pre>
+local m = {}
+
+local cr_sound
+
+function m.data_ready(ctx, filename)
+    if filename == "common\\demo\\fixdemo\\goal\\cut_data\\goal_hugSet_starJump2018_base.fdc" then
+        log("game loaded: " .. filename)
+        -- Play C.Ronaldo "suuu!" sound, when he scores
+        -- cr_suuu_d5.mp3 has 5 seconds of silence, followed by "suuu!"
+        cr_sound = audio.new(ctx.sider_dir .. "content\\audio-demo\\cr_suuu_d5.mp3")
+        cr_sound:set_volume(0.4)
+        cr_sound:play()
+    end
+end
+
+function m.init(ctx)
+    ctx.register("livecpk_data_ready", m.data_ready)
+end
+
+return m
+</pre>
+</p>
+
+<p>
+That's all for now. Enjoy programming and game modding with Sider! :-)<br />
+<a href="#">Back to top</a>
+</p>
 
 </body>
 </html>
