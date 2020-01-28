@@ -8,6 +8,7 @@ h1 { margin-bottom: 0; }
 h4 { color: #660066; margin-top: 0.1em; margin-bottom: 0.1em; }
 h3 { color: #113399; text-decoration: underline; margin-top: 1.6em; }
 .warn { color: #660000; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #880000; border-right: 0.5em solid #880000; background-color: #ccbbbb; }
+.gwarn { color: #666666; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #888888; border-right: 0.5em solid #888888; background-color: #cccccc; }
 .note { color: #336600; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #336600; border-right: 0.5em solid #336600; background-color: #bbccbb; }
 pre { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5ff; font-family: monospace;
     border-top: solid 1px #4477aa; font-size: 0.9em;
@@ -106,10 +107,10 @@ just run <span class="file">sider.exe</span>, it will open a small window, then 
 launch the game itself, then Sider application will exit, but the game will
 continue running with the <span class="file">sider.dll</span> loaded into it.</p>
 
-<p>(The very first time, or after exe update, there will be a small delay
-between the launch of sider and the game starting, as sider needs to
-analyze the process and find hook places in memory, but all subsequent
-starts should be fast)</p>
+<p class="gwarn">The very first time (or after Steam downloads a new, updated PES2020.exe), there will be a small delay
+between the launch of sider and the game starting - maybe 5-10 seconds, as sider needs to
+analyze the process and find hook places in memory. However, next time you do it, the game
+should start quickly (normally).</p>
 
 <h4>The old method</h4>
 <p>The "old" way is still supported too and if you prefer that, the

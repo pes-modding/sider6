@@ -2,6 +2,13 @@ Sider 6 Release History
 =======================
 
 
+January 27, 2020
+v6.3.0
+- audio library to play music and sounds (MP3/WAV/FLAC)
+- all dependencies statically linked into sider.dll: no external DLLs needed
+- new HTML documentation
+
+
 January 9, 2020
 v6.2.5
 - support for 1.03.02 game exe
