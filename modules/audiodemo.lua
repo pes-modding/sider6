@@ -11,7 +11,6 @@ local music_is_playing
 local seq
 local test_sound
 local test_sound2
-local cr_sound
 
 local VKEY_3 = 0x33
 local VKEY_4 = 0x34
@@ -51,14 +50,6 @@ function m.data_ready(ctx, filename)
         log("game loaded: " .. filename)
         -- resume sounds, when Pause Menu exits
         resume_sounds()
-
-    elseif filename == "common\\demo\\fixdemo\\goal\\cut_data\\goal_hugSet_starJump2018_base.fdc" then
-        log("game loaded: " .. filename)
-        -- Play C.Ronaldo "suuu!" sound, when he scores
-        -- cr_suuu_d5.mp3 has 5 seconds of silence, followed by "suuu!"
-        cr_sound = audio.new(content_root .. "cr_suuu_d5.mp3")
-        cr_sound:set_volume(0.4)
-        cr_sound:play()
     end
 end
 
