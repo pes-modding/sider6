@@ -52,6 +52,7 @@ table.inputs tr td.right,th.right { border-right: 1px solid #888; }
 <li><a href="#memory">Memory library</a></li>
 <li><a href="#zlib">Zlib library</a></li>
 <li><a href="#audio">Audio library</a></li>
+<li><a href="#match">Match library</a></li>
 </ol>
 </p>
 
@@ -1435,6 +1436,39 @@ end
 
 return m
 </pre>
+</p>
+
+<a class="top" href="#">Top</a>
+<a name="match">
+<h3>10. Match library</h3>
+</a>
+
+<p>This is a library that allows you query for some statistics about the
+current ongoing match. As of 6.3.0 release, it is still in experimental stage,
+so use with caution. It is actually disabled by default, and in order to enable
+this library, you need to have this line in your <span class="file">sider.ini</span>:
+
+<pre>
+match-stats.enabled = 1
+</pre>
+</p>
+
+<p class="func">match.stats()</p>
+
+<p class="desc">This function returns a table, containing information about live match.
+If there are no stats available right now (because, for example, there is no
+match going on), then the return value will be <span class="file">nil</span>
+</p>
+
+<p>If a table is returned, it can contain the following keys:
+<ol>
+<li><b>home_score</b>, <b>away_score</b>: current score</li>
+<li><b>pk_home_score</b>, <b>pk_away_score</b>: current score in penalty shootout (if one is happening)</li>
+<li><b>period</b>: period of the game: 0 - unknown, 1 - first half, 2 - second half, 3 - 1st exra time, 4 - 2nd extra time,
+5 - penalties</li>
+<li><b>clock_minutes</b>, <b>clock_seconds</b>: current match clock</li>
+<li><b>added_minutes</b>: <span class="file">nil</span> or number of minutes added at the end of a half (announced injury time)</li>
+</ol>
 </p>
 
 <p>
