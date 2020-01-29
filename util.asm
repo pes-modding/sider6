@@ -27,6 +27,8 @@ extern sider_set_team_for_kits:proc
 extern sider_clear_team_for_kits:proc
 extern sider_loaded_uniparam:proc
 
+extern _sci:dq
+
 .code
 sider_read_file_hk proc
 
@@ -522,5 +524,21 @@ sider_loaded_uniparam_hk proc
         ret
 
 sider_loaded_uniparam_hk endp
+
+;00000001420A0D81 | 8B 47 0C                           | mov eax,dword ptr ds:[rdi+C]           |
+;00000001420A0D84 | 89 86 2C 01 00 00                  | mov dword ptr ds:[rsi+12C],eax         | copy clock 2
+;00000001420A0D8A | 8B 47 10                           | mov eax,dword ptr ds:[rdi+10]          |
+;00000001420A0D8D | 89 86 30 01 00 00                  | mov dword ptr ds:[rsi+130],eax         |
+
+sider_copy_clock_hk proc
+
+        mov     _sci,rsi
+        mov     eax,dword ptr [rdi+0ch]
+        mov     dword ptr [rsi+12ch],eax
+        mov     eax,dword ptr [rdi+10h]
+        mov     dword ptr [rsi+130h],eax
+        ret
+
+sider_copy_clock_hk endp
 
 end

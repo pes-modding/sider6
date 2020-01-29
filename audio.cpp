@@ -537,5 +537,5 @@ void init_audio_lib(lua_State *L)
 
     luaL_openlib(L, NULL, audiolib_m, 0);
 
-    luaL_openlib(L, "array", audiolib_f, 0);
+    luaL_openlib(L, "audio", audiolib_f, 0);
 }
