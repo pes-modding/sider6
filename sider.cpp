@@ -1616,11 +1616,19 @@ static int sider_match_get_stats(lua_State *L) {
     lua_pushlightuserdata(L, _sci);
     lua_rawset(L, -3);
 
+    int home_score = _sci->home_score;
+    int away_score = _sci->away_score;
+    if (_sci->sci2 != NULL) {
+        // more accurate: updates sooner
+        home_score = _sci->sci2->home_score;
+        away_score = _sci->sci2->away_score;
+    }
+
     lua_pushstring(L, "home_score");
-    lua_pushnumber(L, _sci->home_score);
+    lua_pushnumber(L, home_score);
     lua_rawset(L, -3);
     lua_pushstring(L, "away_score");
-    lua_pushnumber(L, _sci->away_score);
+    lua_pushnumber(L, away_score);
     lua_rawset(L, -3);
     if (_sci->sci2 != NULL) {
         lua_pushstring(L, "pk_home_score");
