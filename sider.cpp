@@ -3934,9 +3934,6 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
     else {
         prep_stuff();
 
-        // initialize audio lib
-        audio_init();
-
         logu_("Hooking Present\n");
         _org_Present = present;
         logu_("_org_Present = %p\n", _org_Present);
@@ -6702,6 +6699,9 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
 
                 f = GetTickCount64();
                 log_(L"Initialized in %0.3f seconds\n", (f - s)/1000.0);
+
+                // initialize audio lib
+                audio_init();
 
                 /**
                 // performance test
