@@ -228,7 +228,7 @@ Special values:
 <ul>
 <li>65533 - home stadium</li>
 <li>65534 - random stadium</li>
-<li>65355 - not chosen yet</li>
+<li>65535 - not chosen yet</li>
 </ul>
 </td>
 </tr>
@@ -529,8 +529,8 @@ or when it is entering pre-game menus of non-exhibition modes. In addition
 to the actual id of the stadium chosen, the "stadium_id" parameter may have
 the following special values:
 <ul>
-<li>253 : home stadium</li>
-<li>254 : random stadium</li>
+<li>65533 : home stadium</li>
+<li>65534 : random stadium</li>
 </ul>
 </p>
 
@@ -652,8 +652,8 @@ The string needs to be in UTF-8 encoding to correctly render non-ASCII
 characters.</p>
 
 <p class="evthdr">
-Event name: <span class="evt">"get_stadium_name"<span><br />
-Handler function: <span class="func">f(ctx, stadium_name, stadium_id)<span><br />
+Event name: <span class="evt">"get_stadium_name"</span><br />
+Handler function: <span class="func">f(ctx, stadium_name, stadium_id)</span><br />
 Return value expected: <span class="file">nil</span> or string
 </p>
 
@@ -665,8 +665,8 @@ The string needs to be in UTF-8 encoding to correctly render non-ASCII
 characters.</p>
 
 <p class="evthdr">
-Event name: <span class="evt">"trophy_rewrite"<span><br />
-Handler function: <span class="func">f(ctx, tournament_id)<span><br />
+Event name: <span class="evt">"trophy_rewrite"</span><br />
+Handler function: <span class="func">f(ctx, tournament_id)</span><br />
 Return value expected: <span class="file">nil</span> or number
 </p>
 
@@ -881,7 +881,7 @@ string, math, unpack, type, error, io, os, _VERSION, _G</span>
 </p>
 <p>
 sider adds:<br />
-<span class="func">log, memory, _FILE</span>
+<span class="func">log, memory, zlib, audio, match, _FILE</span>
 </p>
 
 <p>You can also enable <span class="func">ffi</span> and <span class="func">bit</span> modules, which are LuaJIT

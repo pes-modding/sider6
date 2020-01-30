@@ -2,6 +2,14 @@ Sider 6 Release History
 =======================
 
 
+January 30, 2020
+v6.3.1
+- bug-fix: if overlay was disabled in sider.ini, then any attempt
+  to play a sound play audio lib would crash the game.
+  (Thanks predator002 for bug report!)
+- minor documentation fixes
+
+
 January 29, 2020
 v6.3.0
 - audio library to play music and sounds (MP3/WAV/FLAC)
