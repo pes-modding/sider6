@@ -14,6 +14,7 @@
 #include "common.h"
 #include "config.h"
 #include "sider.h"
+#include "utf8.h"
 
 #include <deque>
 
@@ -197,12 +198,21 @@ sound_t* audio_new_sound(const char *filename, sound_t *sound)
         sound = (sound_t*)malloc(sizeof(sound_t));
     }
 
-    result = ma_decoder_init_file(filename, NULL, pDecoder);
+    wchar_t *wfname = Utf8::utf8ToUnicode(filename);
+    if (!wfname) {
+        logu_("utf8-to-wide conversion failed for: %s\n", filename);
+        Utf8::free(wfname);
+        return NULL;
+    }
+
+    result = ma_decoder_init_file_w(wfname, NULL, pDecoder);
     if (result != MA_SUCCESS) {
         logu_("ma_decoder_init_file failed for: %s\n", filename);
         //free(sound);
+        Utf8::free(wfname);
         return NULL;
     }
+    Utf8::free(wfname);
 
     deviceConfig = ma_device_config_init(ma_device_type_playback);
     deviceConfig.playback.format   = pDecoder->outputFormat;
