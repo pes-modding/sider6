@@ -288,6 +288,7 @@ int _match_lib_index = 0;
 // away team encoded-id offset: 0x624
 // away team name offset:       0x628
 
+void play_overlay_toggle_sound();
 int get_context_field_int(const char *name);
 void set_context_field_lightuserdata(const char *name, void *p);
 void set_context_field_boolean(const char *name, bool value);
@@ -3445,6 +3446,7 @@ DWORD direct_input_poll(void *param) {
                         BYTE b2 = *(BYTE*)((BYTE*)&state + _gamepad_config->_overlay_toggle_2);
                         if (b1==1 && b2==1 && (was_b1!=b1 || was_b2!=b2)) {
                             _overlay_on = !_overlay_on;
+                            play_overlay_toggle_sound();
                             handled = true;
                             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
                         }
@@ -3580,6 +3582,7 @@ DWORD direct_input_poll(void *param) {
                     BYTE b2 = *(BYTE*)(_controller_buttons + _di_overlay_toggle2.dwOfs);
                     if (b1!=0 && b2!=0 && (was_b1!=b1 || was_b2!=b2)) {
                         _overlay_on = !_overlay_on;
+                        play_overlay_toggle_sound();
                         handled = true;
                         DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
                     }
@@ -6862,6 +6865,22 @@ LRESULT CALLBACK sider_foreground_idle_proc(int code, WPARAM wParam, LPARAM lPar
     return CallNextHookEx(handle1, code, wParam, lParam);
 }
 
+void play_overlay_toggle_sound()
+{
+    if (_config->_overlay_toggle_sound != L"") {
+        wstring fname(sider_dir);
+        fname += _config->_overlay_toggle_sound;
+        char *utf8filename = Utf8::unicodeToUtf8(fname.c_str());
+
+        sound_t* sound = audio_new_sound(utf8filename, NULL);
+        if (sound) {
+            audio_set_volume(sound, _config->_overlay_toggle_sound_volume);
+            audio_play(sound);
+        }
+        Utf8::free(utf8filename);
+    }
+}
+
 LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
 {
     if (code < 0) {
@@ -6871,23 +6890,10 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
     if (code == HC_ACTION) {
         if (wParam == _config->_overlay_vkey_toggle && ((lParam & 0x80000000) != 0)) {
             _overlay_on = !_overlay_on;
+            play_overlay_toggle_sound();
             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
             if (_overlay_on) {
                 _overlay_image.to_clear = true;
-            }
-
-            // play toggle sound
-            if (_config->_overlay_toggle_sound != L"") {
-                wstring fname(sider_dir);
-                fname += _config->_overlay_toggle_sound;
-                char *utf8filename = Utf8::unicodeToUtf8(fname.c_str());
-
-                sound_t* sound = audio_new_sound(utf8filename, NULL);
-                if (sound) {
-                    audio_set_volume(sound, _config->_overlay_toggle_sound_volume);
-                    audio_play(sound);
-                }
-                Utf8::free(utf8filename);
             }
         }
         else if (wParam == _config->_vkey_reload_2 && ((lParam & 0x80000000) != 0)) {

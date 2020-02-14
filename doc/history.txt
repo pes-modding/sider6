@@ -2,6 +2,13 @@ Sider 6 Release History
 =======================
 
 
+February 14, 2020
+v6.3.2
+- corrections for kit attributes: ChestNumberY, NameY
+- bug-fix: non-ASCII filenames are supported now by audio lib
+- overlay toggle plays when toggled on/off by gamepad
+
+
 January 30, 2020
 v6.3.1
 - bug-fix: if overlay was disabled in sider.ini, then any attempt
