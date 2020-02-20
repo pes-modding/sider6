@@ -4306,6 +4306,7 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
 
     if (_config->_lua_enabled) {
         if (is_home) {
+            lock_t lock(&_cs);
             clear_context_fields(_context_fields, _context_fields_count);
             _stadium_choice_count = 0;
             _sci = NULL;
@@ -4437,6 +4438,7 @@ DWORD sider_trophy_check(DWORD trophy_id)
 
 void sider_context_reset()
 {
+    lock_t lock(&_cs);
     clear_context_fields(_context_fields, _context_fields_count);
     _tournament_id = 0xffff;
     _stadium_choice_count = 0;
