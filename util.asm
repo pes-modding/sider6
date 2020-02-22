@@ -26,6 +26,7 @@ extern sider_kit_status:proc
 extern sider_set_team_for_kits:proc
 extern sider_clear_team_for_kits:proc
 extern sider_loaded_uniparam:proc
+extern sider_clear_sc:proc
 
 extern _sci:dq
 
@@ -540,5 +541,33 @@ sider_copy_clock_hk proc
         ret
 
 sider_copy_clock_hk endp
+
+;0000000156BF2F05 | 49 8D 9E E0 00 00 00               | lea rbx,qword ptr ds:[r14+E0]          | scoreboard clear routine
+;0000000156BF2F0C | 49 8D B6 D0 00 00 00               | lea rsi,qword ptr ds:[r14+D0]          |
+;0000000156BF2F13 | 8D 6F 02                           | lea ebp,qword ptr ds:[rdi+2]           |
+
+sider_clear_sc_hk proc
+
+        push    rcx
+        push    rdx
+        push    r8
+        push    r9
+        push    r10
+        push    r11
+        sub     rsp,28h
+        mov     rcx,r14
+        call    sider_clear_sc
+        add     rsp,28h
+        pop     r11
+        pop     r10
+        pop     r9
+        pop     r8
+        pop     rdx
+        pop     rcx
+        lea rbx, qword ptr [r14+0e0h]
+        lea rsi, qword ptr [r14+0d0h]
+        ret
+
+sider_clear_sc_hk endp
 
 end

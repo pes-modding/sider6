@@ -279,7 +279,6 @@ TEAM_INFO_STRUCT *_home_team_info = NULL;
 TEAM_INFO_STRUCT *_away_team_info = NULL;
 
 extern "C" SCOREBOARD_INFO *_sci = NULL;
-BYTE *_sci_vtable = NULL;
 int _stats_table_index = 0;
 int _match_lib_index = 0;
 
@@ -700,6 +699,10 @@ extern "C" BYTE* sider_loaded_uniparam(BYTE *uniparam);
 extern "C" void sider_loaded_uniparam_hk();
 
 extern "C" void sider_copy_clock_hk();
+
+extern "C" void sider_clear_sc(SCOREBOARD_INFO *sci);
+
+extern "C" void sider_clear_sc_hk();
 
 static DWORD dwThreadId;
 static DWORD hookingThreadId = 0;
@@ -1601,16 +1604,7 @@ static int sider_match_get_stats(lua_State *L) {
         lua_pushnil(L);
         return 1;
     }
-    if (_sci_vtable == NULL) {
-        _sci_vtable = _sci->vtable;
-    }
-    else if (_sci_vtable != _sci->vtable) {
-        // looks like object has changed, or being destroyed
-        // do not try to use its fields
-        lua_pushnil(L);
-        return 1;
-    }
-
+    //logu_("_sci = %p\n", _sci);
     lua_pushvalue(L, lua_upvalueindex(1));
 
     lua_pushstring(L, "ptr");
@@ -4310,7 +4304,6 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
             clear_context_fields(_context_fields, _context_fields_count);
             _stadium_choice_count = 0;
             _sci = NULL;
-            _sci_vtable = NULL;
         }
         else {
             _tournament_id = mi->tournament_id_encoded;
@@ -4444,7 +4437,6 @@ void sider_context_reset()
     _stadium_choice_count = 0;
     _mi = NULL;
     _sci = NULL;
-    _sci_vtable = NULL;
     _home_team_info = NULL;
     _away_team_info = NULL;
 
@@ -4642,6 +4634,13 @@ BYTE* sider_loaded_uniparam(BYTE* uniparam)
         }
     }
     return uniparam;
+}
+
+void sider_clear_sc(SCOREBOARD_INFO *sci)
+{
+    lock_t lock(&_cs);
+    logu_("clearing _sci: %p --> 0\n", sci);
+    _sci = NULL;
 }
 
 void sider_check_kit_choice(MATCH_INFO_STRUCT *mi, DWORD home_or_away)
@@ -6094,7 +6093,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 36
+#define NUM_PATTERNS 37
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6132,6 +6131,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[34] = pattern2_set_stadium_choice;
     frag[35] = pattern2_call_to_move;
     frag[36] = pattern_copy_clock;
+    frag[37] = pattern_clear_sc;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -6187,6 +6187,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[34] = _config->_lua_enabled ? sizeof(pattern2_set_stadium_choice)-1 : 0;
     frag_len[35] = _config->_lua_enabled ? sizeof(pattern2_call_to_move)-1 : 0;
     frag_len[36] = _config->_lua_enabled ? sizeof(pattern_copy_clock)-1 : 0;
+    frag_len[37] = _config->_lua_enabled ? sizeof(pattern_clear_sc)-1 : 0;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -6225,6 +6226,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[34] = offs2_set_stadium_choice;
     offs[35] = offs2_call_to_move;
     offs[36] = offs_copy_clock;
+    offs[37] = offs_clear_sc;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -6263,6 +6265,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[34] = &_config->_hp_at_set_stadium_choice;
     addrs[35] = &_config->_hp_at_call_to_move;
     addrs[36] = &_config->_hp_at_copy_clock;
+    addrs[37] = &_config->_hp_at_clear_sc;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -6378,6 +6381,7 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_clear_team_for_kits > 0 &&
             cfg->_hp_at_uniparam_loaded > 0 &&
             cfg->_hp_at_copy_clock > 0 &&
+            cfg->_hp_at_clear_sc > 0 &&
             true
         );
     }
@@ -6551,6 +6555,7 @@ bool hook_if_all_found() {
             hook_call_rdx(_config->_hp_at_uniparam_loaded, (BYTE*)sider_loaded_uniparam_hk, 0);
             if (_config->_match_stats_enabled) {
                 hook_call(_config->_hp_at_copy_clock, (BYTE*)sider_copy_clock_hk, 6);
+                hook_call(_config->_hp_at_clear_sc, (BYTE*)sider_clear_sc_hk, 2);
             }
 
             BYTE *old_moved_call = _config->_hp_at_def_stadium_name + def_stadium_name_moved_call_offs_old;
