@@ -1131,6 +1131,7 @@ public:
 stats_t *_stats(NULL);
 stats_t *_content_stats(NULL);
 stats_t *_fileops_stats(NULL);
+stats_t *_overlay_stats(NULL);
 
 #ifdef PERF_TESTING
 #define PERF_TIMER(stats) perf_timer_t timer(stats)
@@ -2435,6 +2436,7 @@ void module_overlay_on(module_t *m, char **text, char **image_path, struct layou
     *text = NULL;
     *image_path = NULL;
     if (m->evt_overlay_on != 0) {
+        PERF_TIMER(_overlay_stats);
         EnterCriticalSection(&_cs);
         // garbage collection
         lua_gc(L, _config->_lua_gc_opt, 0);
@@ -6000,6 +6002,7 @@ DWORD install_func(LPVOID thread_param) {
     _stats = new stats_t(L"have_live");
     _content_stats = new stats_t(L"have_content");
     _fileops_stats = new stats_t(L"fileops");
+    _overlay_stats = new stats_t(L"overlay_on");
 #endif
 
     //_lookup_cache = new lookup_cache_t(_config->_cache_size);
@@ -6827,6 +6830,7 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 if (_stats) { delete _stats; }
                 if (_content_stats) { delete _content_stats; }
                 if (_fileops_stats) { delete _fileops_stats; }
+                if (_overlay_stats) { delete _overlay_stats; }
 
                 // report hit pc
                 if (fileops_tc > 1.0) {
