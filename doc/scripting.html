@@ -507,6 +507,19 @@ The team ids are also set as "home_team" and "away_team" fields in
 the context object so that they can be used later, if needed.</p>
 
 <p class="evthdr">
+Event name: <span class="evt">"set_kits"</span><br />
+Handler function: <span class="func">f(ctx, home_kit_info, away_kit_info)</span><br />
+Return value expected: <span class="file">nil</span> or table or two tables.
+</p>
+
+<p>This event fires when player kits are chosen for both home and away teams -
+The "home_kit_info" and "away_kit_info" contain kit attributes for home and
+away player kits respectively. The handler function can modify the kit attributes
+at this point by returning tables - one for home team, another - for away team,
+containing the changed attributes. (For more information on this, consult
+the "Kitserver 2020" thread on EvoWeb forums)</p>
+
+<p class="evthdr">
 Event name: <span class="evt">"set_match_time"</span><br />
 Handler function: <span class="func">f(ctx, minutes)</span><br />
 Return value expected: <span class="file">nil</span> or <span class="file">integer</span>

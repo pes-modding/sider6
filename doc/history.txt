@@ -2,6 +2,12 @@ Sider 6 Release History
 =======================
 
 
+February 25, 2020
+v6.3.3
+- bug-fix: a Lua module using "match" library could cause crashes
+  in some circumstances. This has been fixed now.
+
+
 February 14, 2020
 v6.3.2
 - corrections for kit attributes: ChestNumberY, NameY
