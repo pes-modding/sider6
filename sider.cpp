@@ -3295,29 +3295,46 @@ void draw_ui(float top, float bottom, float right_margin)
     g_pRenderTargetView->Release();
 }
 
+void sider_switch_overlay_to_prev_module()
+{
+    if (_curr_overlay_m != _modules.end()) {
+        // previous module
+        vector<module_t*>::iterator j = _curr_overlay_m;
+        do {
+            if (j == _modules.begin()) {
+                j = _modules.end();
+            }
+            j--;
+            module_t *m = *j;
+            if (m->evt_overlay_on) {
+                log_(L"now active module on overlay: %s\n", m->filename->c_str());
+                _curr_overlay_m = j;
+                break;
+            }
+        }
+        while (j != _curr_overlay_m);
+        _overlay_image.to_clear = true;
+    }
+}
+
 void sider_switch_overlay_to_next_module()
 {
     if (_curr_overlay_m != _modules.end()) {
         // next module
-        _curr_overlay_m++;
-        for (; _curr_overlay_m != _modules.end(); _curr_overlay_m++) {
-            module_t *m = *_curr_overlay_m;
+        vector<module_t*>::iterator j = _curr_overlay_m;
+        do {
+            j++;
+            if (j == _modules.end()) {
+                j = _modules.begin();
+            }
+            module_t *m = *j;
             if (m->evt_overlay_on) {
                 log_(L"now active module on overlay: %s\n", m->filename->c_str());
+                _curr_overlay_m = j;
                 break;
             }
         }
-        if (_curr_overlay_m == _modules.end()) {
-            // start from beginning again
-            _curr_overlay_m = _modules.begin();
-            for (; _curr_overlay_m != _modules.end(); _curr_overlay_m++) {
-                module_t *m = *_curr_overlay_m;
-                if (m->evt_overlay_on) {
-                    log_(L"now active module on overlay: %s\n", m->filename->c_str());
-                    break;
-                }
-            }
-        }
+        while (j != _curr_overlay_m);
         _overlay_image.to_clear = true;
     }
 }
@@ -5968,6 +5985,16 @@ void lua_reload_modified_modules()
                     }
                 }
             }
+            else if (_curr_overlay_m == _modules.end()) {
+                vector<module_t*>::iterator j;
+                for (j = _modules.begin(); j != _modules.end(); j++) {
+                    module_t *m = *j;
+                    if (m->evt_overlay_on) {
+                        _curr_overlay_m = j;
+                        break;
+                    }
+                }
+            }
             // reload finished
         }
     }
@@ -6039,6 +6066,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"overlay.font-size = %d\n", _config->_overlay_font_size);
     log_(L"overlay.vkey.toggle = 0x%02x\n", _config->_overlay_vkey_toggle);
     log_(L"overlay.vkey.next-module = 0x%02x\n", _config->_overlay_vkey_next_module);
+    log_(L"overlay.vkey.prev-module = 0x%02x\n", _config->_overlay_vkey_prev_module);
     log_(L"overlay.toggle.sound = %s\n", _config->_overlay_toggle_sound.c_str());
     log_(L"overlay.toggle.sound-volume = %0.2f\n", _config->_overlay_toggle_sound_volume);
     log_(L"match-stats.enabled = %d\n", _config->_match_stats_enabled);
@@ -6925,6 +6953,9 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
                     // "[" - 0xdb, "]" - 0xdd, "~" - 0xc0, "1" - 0x31
                     if (wParam == _config->_overlay_vkey_next_module) {
                         sider_switch_overlay_to_next_module();
+                    }
+                    else if (wParam == _config->_overlay_vkey_prev_module) {
+                        sider_switch_overlay_to_prev_module();
                     }
                     else {
                         // lua callback

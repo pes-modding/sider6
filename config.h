@@ -23,6 +23,7 @@ using namespace std;
 #define DEFAULT_OVERLAY_LOCATION 0
 #define DEFAULT_OVERLAY_VKEY_TOGGLE 0x20
 #define DEFAULT_OVERLAY_VKEY_NEXT_MODULE 0x31
+#define DEFAULT_OVERLAY_VKEY_PREV_MODULE 0xc0
 #define DEFAULT_OVERLAY_TOGGLE_SOUND L"toggle.wav"
 #define DEFAULT_OVERLAY_TOGGLE_SOUND_VOLUME 1.0f
 #define DEFAULT_VKEY_RELOAD_1 0x10 //Shift
@@ -72,6 +73,7 @@ public:
     int _overlay_font_size;
     int _overlay_vkey_toggle;
     int _overlay_vkey_next_module;
+    int _overlay_vkey_prev_module;
     int _vkey_reload_1;
     int _vkey_reload_2;
     int _num_minutes;
@@ -142,6 +144,7 @@ public:
                  _overlay_location(DEFAULT_OVERLAY_LOCATION),
                  _overlay_vkey_toggle(DEFAULT_OVERLAY_VKEY_TOGGLE),
                  _overlay_vkey_next_module(DEFAULT_OVERLAY_VKEY_NEXT_MODULE),
+                 _overlay_vkey_prev_module(DEFAULT_OVERLAY_VKEY_PREV_MODULE),
                  _vkey_reload_1(DEFAULT_VKEY_RELOAD_1),
                  _vkey_reload_2(DEFAULT_VKEY_RELOAD_2),
                  _key_cache_ttl_sec(10),
@@ -277,6 +280,12 @@ public:
                 int v;
                 if (swscanf(value.c_str(), L"%x", &v)==1) {
                     _overlay_vkey_next_module = v;
+                }
+            }
+            else if (wcscmp(L"overlay.vkey.prev-module", key.c_str())==0) {
+                int v;
+                if (swscanf(value.c_str(), L"%x", &v)==1) {
+                    _overlay_vkey_prev_module = v;
                 }
             }
             else if (wcscmp(L"vkey.reload-1", key.c_str())==0) {
