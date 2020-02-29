@@ -29,3 +29,9 @@ soft/FW1FontWrapper/Source/gsimple.h
 soft/FW1FontWrapper/Source/gclip.h
 soft/FW1FontWrapper/Source/psimple.h
 soft/FW1FontWrapper/Source/pclip.h
+buildvm.exp
+buildvm.lib
+luajit.exp
+luajit.lib
+minilua.exp
+minilua.lib
