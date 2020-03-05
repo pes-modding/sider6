@@ -260,6 +260,17 @@ struct SCOREBOARD_INFO {
     DWORD added_minutes;
 };
 
+struct SCHEDULE_ENTRY {
+    DWORD unknown1;
+    WORD tournament_id;
+    BYTE match_info;
+    BYTE unknown2;
+    DWORD unknown3[3];
+    DWORD home_team_encoded;
+    DWORD away_team_encoded;
+    DWORD unknown4;
+};
+
 #define TT_LEN 0x148
 TROPHY_TABLE_ENTRY _trophy_table[TT_LEN];
 TROPHY_TABLE_ENTRY _trophy_map[TT_LEN];
@@ -287,6 +298,7 @@ int _match_lib_index = 0;
 // away team encoded-id offset: 0x624
 // away team name offset:       0x628
 
+DWORD decode_team_id(DWORD team_id_encoded);
 void play_overlay_toggle_sound();
 int get_context_field_int(const char *name);
 void set_context_field_lightuserdata(const char *name, void *p);
@@ -662,7 +674,7 @@ extern "C" char* sider_ball_name(char *ball_name);
 
 extern "C" void sider_ball_name_hk();
 
-extern "C" char* sider_stadium_name(STAD_INFO_STRUCT *stad_info);
+extern "C" char* sider_stadium_name(STAD_INFO_STRUCT *stad_info, LONGLONG rdx, LONGLONG ptr, SCHEDULE_ENTRY *se);
 
 extern "C" void sider_stadium_name_hk();
 
@@ -2404,7 +2416,7 @@ char *module_ball_name(module_t *m, char *name)
     return res;
 }
 
-char *module_stadium_name(module_t *m, char *name, BYTE stadium_id)
+char *module_stadium_name(module_t *m, char *name, BYTE stadium_id, SCHEDULE_ENTRY *se)
 {
     char *res = NULL;
     if (m->evt_get_stadium_name != 0) {
@@ -2415,7 +2427,21 @@ char *module_stadium_name(module_t *m, char *name, BYTE stadium_id)
         lua_pushvalue(L, 1); // ctx
         lua_pushstring(L, name);
         lua_pushinteger(L, stadium_id);
-        if (lua_pcall(L, 3, 1, 0) != LUA_OK) {
+        if (se) {
+            lua_newtable(L);
+            lua_pushinteger(L, se->tournament_id);
+            lua_setfield(L, -2, "tournament_id");
+            lua_pushinteger(L, se->match_info);
+            lua_setfield(L, -2, "match_info");
+            lua_pushinteger(L, decode_team_id(se->home_team_encoded));
+            lua_setfield(L, -2, "home_team");
+            lua_pushinteger(L, decode_team_id(se->away_team_encoded));
+            lua_setfield(L, -2, "away_team");
+        }
+        else {
+            lua_pushnil(L);
+        }
+        if (lua_pcall(L, 4, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR from module_stadium_name: %s\n", GetCurrentThreadId(), err);
         }
@@ -4492,14 +4518,15 @@ char* sider_ball_name(char *ball_name)
     return ball_name;
 }
 
-char* sider_stadium_name(STAD_INFO_STRUCT *stad_info)
+char* sider_stadium_name(STAD_INFO_STRUCT *stad_info, LONGLONG rdx, LONGLONG ptr, SCHEDULE_ENTRY *se)
 {
     if (_config->_lua_enabled) {
+        se = (ptr != 0 && ptr != 1) ? se : NULL;
         // lua callbacks
         vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
-            char *new_stadium_name = module_stadium_name(m, stad_info->name, stad_info->id);
+            char *new_stadium_name = module_stadium_name(m, stad_info->name, stad_info->id, se);
             if (new_stadium_name) {
                 return new_stadium_name;
             }
