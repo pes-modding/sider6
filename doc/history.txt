@@ -2,6 +2,14 @@ Sider 6 Release History
 =======================
 
 
+March 5, 2020
+v6.3.4
+- support for 1.05.00 exe
+- bi-directional cycling through modules in overlay
+- improvement for "get_stadium_name" event - to better
+  work with the schedule bar in Master League
+
+
 February 25, 2020
 v6.3.3
 - bug-fix: a Lua module using "match" library could cause crashes

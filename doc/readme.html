@@ -25,7 +25,7 @@ a { color: #33f; }
 <!--<a href="sider.jpg"><img src="sider.jpg" width="100%"/></a>-->
 
 <h1>Sider 6 for Pro Evolution Soccer 2020</h1>
-<h4>version 6.3.3 from February 25, 2020</h4>
+<h4>version 6.3.4 from March 5, 2020</h4>
 <a href="history.txt">history.txt</a>
 
 <h3>INTRODUCTION</h3>
@@ -271,9 +271,10 @@ overlay.enabled = 1
 
 <p>- This option enables an interactive overlay. The overlay can display
 text that is provided by Lua modules, with one module having control
-of the overlay at any given time. By pressing a hotkey (set by
-<b>overlay.vkey.next-module</b> option) the control of the overlay can be switched
-to the next module, and so on. The overlay is toggled on/off with another
+of the overlay at any given time. By pressing hotkeys (set by
+<b>overlay.vkey.next-module</b> and <b>overlay.vkey.prev-module</b> options)
+the control of the overlay can be switched to the next or to the previous
+module, and so on. The overlay is toggled on/off with another
 hotkey, set by <b>overlay.vkey.toggle</b> option. When the overlay is on, the
 key presses are passed on to the module that is currently in control of
 the overlay. The module can handle those key events in whatever way
@@ -309,6 +310,7 @@ used, but monospaced fonts are recommended for easier formatting.</p>
 <pre>
 overlay.vkey.toggle = 0x20
 overlay.vkey.next-module = 0x31
+overlay.vkey.prev-module = 0xc0
 </pre>
 
 <p>- hot keys for toggling overlay on/off, and for switching control
@@ -316,7 +318,8 @@ of the overlay among the modules. Values must be specified in
 hexadecimal format. The default ones are:
 <ul>
     <li>0x20 [Space] - for toggle</li>
-    <li>0x31 [1]     - for next-module</li>
+    <li>0x31 [1]     - for next module</li>
+    <li>0xc0 [~]     - for previous module</li>
 </ul>
 Full list of codes for all keys can be found here:
 <a href="https://docs.microsoft.com/en-us/windows/desktop/inputdev/virtual-key-codes">

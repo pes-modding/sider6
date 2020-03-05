@@ -666,7 +666,7 @@ characters.</p>
 
 <p class="evthdr">
 Event name: <span class="evt">"get_stadium_name"</span><br />
-Handler function: <span class="func">f(ctx, stadium_name, stadium_id)</span><br />
+Handler function: <span class="func">f(ctx, stadium_name, stadium_id, schedule_entry)</span><br />
 Return value expected: <span class="file">nil</span> or string
 </p>
 
@@ -676,6 +676,21 @@ You handler function can change it, if it returns a string instead of nil.
 information - for which stadium the name is being read/modified)
 The string needs to be in UTF-8 encoding to correctly render non-ASCII
 characters.</p>
+
+<p>The last parameter - <span class="func">schedule_entry</span> - is new in sider 6.3.4. It is set to
+<span class="file">nil</span> in all usual scenarios where stadium name is chosen, except for the case when
+a Master League screen shows a small fragment of the schedule (schedule bar) with
+the 4 matches: 1 that just happened, and 3 in the future. This is new in PES 2020
+Master League (was not there in PES 2019). In this use-case the "get_stadium_name" event fires for each of
+those 4 matches, and the <span class="func">schedule_entry</span> parameter is a table that contains
+information about the corresponding match as its keys:
+<ul>
+<li>tournament_id</li>
+<li>match_info</li>
+<li>home_team</li>
+<li>away_team</li>
+</ul>
+</p>
 
 <p class="evthdr">
 Event name: <span class="evt">"trophy_rewrite"</span><br />
