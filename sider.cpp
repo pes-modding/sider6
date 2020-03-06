@@ -474,6 +474,7 @@ struct di_input_t {
 di_input_t _di_overlay_toggle1;
 di_input_t _di_overlay_toggle2;
 di_input_t _di_module_switch;
+di_input_t _di_module_switch_prev;
 
 struct di_change_t {
     int state;
@@ -499,6 +500,8 @@ struct xi_change_t {
 };
 xi_change_t _xi_changes[32];
 size_t _xi_changes_len = 0;
+
+bool _toggle_sequence_on(false);
 
 IFW1Factory *g_pFW1Factory;
 IFW1FontWrapper *g_pFontWrapper;
@@ -947,6 +950,7 @@ public:
     int _overlay_toggle_1;
     int _overlay_toggle_2;
     int _overlay_next_module;
+    int _overlay_prev_module;
     float _stick_sensitivity;
     DWORD _gamepad_poll_interval_msec;
     DWORD _gamepad_overlay_poll_interval_msec;
@@ -958,6 +962,7 @@ public:
             _overlay_toggle_1(GAMEPAD::RT),
             _overlay_toggle_2(GAMEPAD::LT),
             _overlay_next_module(GAMEPAD::LT),
+            _overlay_prev_module(GAMEPAD::RT),
             _stick_sensitivity(DEFAULT_GAMEPAD_STICK_SENSITIVITY),
             _gamepad_poll_interval_msec(DEFAULT_GAMEPAD_POLL_INTERVAL_MSEC),
             _gamepad_overlay_poll_interval_msec(DEFAULT_GAMEPAD_OVERLAY_POLL_INTERVAL_MSEC),
@@ -1022,6 +1027,12 @@ public:
                 int what = xi_name_to_number(value.c_str());
                 if (what != -1) {
                     _overlay_next_module = what;
+                }
+            }
+            else if (wcscmp(L"gamepad.overlay.prev-module", key.c_str())==0) {
+                int what = xi_name_to_number(value.c_str());
+                if (what != -1) {
+                    _overlay_prev_module = what;
                 }
             }
             else if (wcscmp(L"gamepad.stick-sensitivity", key.c_str())==0) {
@@ -1861,6 +1872,12 @@ BOOL sider_object_enum_callback(LPCDIDEVICEOBJECTINSTANCE lpddoi, LPVOID pvRef)
             _di_module_switch.dwType = ddoi.dwType;
             _di_module_switch.dwOfs = ddoi.dwOfs;
             _di_module_switch.what = what;
+        }
+        // prev module
+        if (what == _gamepad_config->_overlay_prev_module) {
+            _di_module_switch_prev.dwType = ddoi.dwType;
+            _di_module_switch_prev.dwOfs = ddoi.dwOfs;
+            _di_module_switch_prev.what = what;
         }
     }
     return DIENUM_CONTINUE;
@@ -3487,18 +3504,33 @@ DWORD direct_input_poll(void *param) {
                             _overlay_on = !_overlay_on;
                             play_overlay_toggle_sound();
                             handled = true;
+                            _toggle_sequence_on = true;
                             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
                         }
-                        else {
+                        else if (!_toggle_sequence_on) {
                             // module switch
                             BYTE was_b = *(BYTE*)((BYTE*)&_prev_xi_state + _gamepad_config->_overlay_next_module);
                             BYTE b = *(BYTE*)((BYTE*)&state + _gamepad_config->_overlay_next_module);
-                            if (b==1 && was_b!=b) {
+                            if (b==0 && was_b!=b) {
                                 if (_overlay_on) {
                                     sider_switch_overlay_to_next_module();
                                     handled = true;
                                 }
                             }
+                            else {
+                                was_b = *(BYTE*)((BYTE*)&_prev_xi_state + _gamepad_config->_overlay_prev_module);
+                                b = *(BYTE*)((BYTE*)&state + _gamepad_config->_overlay_prev_module);
+                                if (b==0 && was_b!=b) {
+                                    if (_overlay_on) {
+                                        sider_switch_overlay_to_prev_module();
+                                        handled = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (_toggle_sequence_on && b1==0 && b2==0) {
+                            _toggle_sequence_on = false;
                         }
 
                         // check states
@@ -3623,18 +3655,33 @@ DWORD direct_input_poll(void *param) {
                         _overlay_on = !_overlay_on;
                         play_overlay_toggle_sound();
                         handled = true;
+                        _toggle_sequence_on = true;
                         DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
                     }
-                    else {
+                    else if (!_toggle_sequence_on) {
                         // module switch
                         BYTE was_b = *(BYTE*)(_prev_controller_buttons + _di_module_switch.dwOfs);
                         BYTE b = *(BYTE*)(_controller_buttons + _di_module_switch.dwOfs);
-                        if (b!=0 && was_b!=b) {
+                        if (b==0 && was_b!=b) {
                             if (_overlay_on) {
                                 sider_switch_overlay_to_next_module();
                                 handled = true;
                             }
                         }
+                        else {
+                            was_b = *(BYTE*)(_prev_controller_buttons + _di_module_switch_prev.dwOfs);
+                            b = *(BYTE*)(_controller_buttons + _di_module_switch_prev.dwOfs);
+                            if (b==0 && was_b!=b) {
+                                if (_overlay_on) {
+                                    sider_switch_overlay_to_prev_module();
+                                    handled = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (_toggle_sequence_on && b1==0 && b2==0) {
+                        _toggle_sequence_on = false;
                     }
 
                     // check states
@@ -6112,6 +6159,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"gamepad.overlay.toggle-1 = %s\n", _xi_names[_gamepad_config->_overlay_toggle_1]);
     log_(L"gamepad.overlay.toggle-2 = %s\n", _xi_names[_gamepad_config->_overlay_toggle_2]);
     log_(L"gamepad.overlay.next-module = %s\n", _xi_names[_gamepad_config->_overlay_next_module]);
+    log_(L"gamepad.overlay.prev-module = %s\n", _xi_names[_gamepad_config->_overlay_prev_module]);
     if (_gamepad_config->_dinput_enabled) {
         log_(L"--------------------------\n");
         log_(L"DirectInput controls map: %d items\n", _gamepad_config->_di_map.size());
