@@ -2,6 +2,12 @@ Sider 6 Release History
 =======================
 
 
+March 6, 2020
+v6.3.5
+- bi-direction cycling through modules in overlay via gamepad
+- documentation corrections and updates
+
+
 March 5, 2020
 v6.3.4
 - support for 1.05.00 exe

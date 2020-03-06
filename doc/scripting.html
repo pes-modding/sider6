@@ -302,7 +302,8 @@ context.</p>
 <p class="warn">IMPORTANT NOTE:<br />
 kit operations only work for "licensed" teams, in other
 words, for those that have real kits, not ones made in game editor.
-If your team is unlicensed - use <b>Kit Studio</b> by <span class="user">zlac</span> to convert it
+If your team is unlicensed, use <b>Kit Studio</b> or <b>Team Licencer</b>
+from SimpleTools collection (both tools by <span class="user">zlac</span>) to convert it
 to a licensed team.</p>
 
 <p>The table contains the following functions:</p>
@@ -486,6 +487,10 @@ local m = {}
 
 function m.data_ready(ctx, filename, data, size, total_size, offset)
     log(filename)
+end
+
+function m.init(ctx)
+    ctx.register("livecpk_data_ready", m.data_ready)
 end
 
 return m
