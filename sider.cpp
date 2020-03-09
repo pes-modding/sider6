@@ -23,6 +23,7 @@
 #include "kitinfo.h"
 #include "audio.h"
 
+#define XINPUT_USE_9_1_0
 #define DIRECTINPUT_VERSION 0x0800
 #define SAFE_RELEASE(x) if (x) { x->Release(); x = NULL; }
 
@@ -43,7 +44,8 @@
 //#pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
-#pragma comment(lib, "xinput.lib")
+//#pragma comment(lib, "xinput.lib")
+#pragma comment(lib, "xinput9_1_0.lib")
 
 #ifndef LUA_OK
 #define LUA_OK 0
@@ -260,6 +262,17 @@ struct SCOREBOARD_INFO {
     DWORD added_minutes;
 };
 
+struct SCHEDULE_ENTRY {
+    DWORD unknown1;
+    WORD tournament_id;
+    BYTE match_info;
+    BYTE unknown2;
+    DWORD unknown3[3];
+    DWORD home_team_encoded;
+    DWORD away_team_encoded;
+    DWORD unknown4;
+};
+
 #define TT_LEN 0x148
 TROPHY_TABLE_ENTRY _trophy_table[TT_LEN];
 TROPHY_TABLE_ENTRY _trophy_map[TT_LEN];
@@ -287,6 +300,7 @@ int _match_lib_index = 0;
 // away team encoded-id offset: 0x624
 // away team name offset:       0x628
 
+DWORD decode_team_id(DWORD team_id_encoded);
 void play_overlay_toggle_sound();
 int get_context_field_int(const char *name);
 void set_context_field_lightuserdata(const char *name, void *p);
@@ -462,6 +476,7 @@ struct di_input_t {
 di_input_t _di_overlay_toggle1;
 di_input_t _di_overlay_toggle2;
 di_input_t _di_module_switch;
+di_input_t _di_module_switch_prev;
 
 struct di_change_t {
     int state;
@@ -487,6 +502,8 @@ struct xi_change_t {
 };
 xi_change_t _xi_changes[32];
 size_t _xi_changes_len = 0;
+
+bool _toggle_sequence_on(false);
 
 IFW1Factory *g_pFW1Factory;
 IFW1FontWrapper *g_pFontWrapper;
@@ -662,7 +679,7 @@ extern "C" char* sider_ball_name(char *ball_name);
 
 extern "C" void sider_ball_name_hk();
 
-extern "C" char* sider_stadium_name(STAD_INFO_STRUCT *stad_info);
+extern "C" char* sider_stadium_name(STAD_INFO_STRUCT *stad_info, LONGLONG rdx, LONGLONG ptr, SCHEDULE_ENTRY *se);
 
 extern "C" void sider_stadium_name_hk();
 
@@ -935,6 +952,7 @@ public:
     int _overlay_toggle_1;
     int _overlay_toggle_2;
     int _overlay_next_module;
+    int _overlay_prev_module;
     float _stick_sensitivity;
     DWORD _gamepad_poll_interval_msec;
     DWORD _gamepad_overlay_poll_interval_msec;
@@ -946,6 +964,7 @@ public:
             _overlay_toggle_1(GAMEPAD::RT),
             _overlay_toggle_2(GAMEPAD::LT),
             _overlay_next_module(GAMEPAD::LT),
+            _overlay_prev_module(GAMEPAD::RT),
             _stick_sensitivity(DEFAULT_GAMEPAD_STICK_SENSITIVITY),
             _gamepad_poll_interval_msec(DEFAULT_GAMEPAD_POLL_INTERVAL_MSEC),
             _gamepad_overlay_poll_interval_msec(DEFAULT_GAMEPAD_OVERLAY_POLL_INTERVAL_MSEC),
@@ -1010,6 +1029,12 @@ public:
                 int what = xi_name_to_number(value.c_str());
                 if (what != -1) {
                     _overlay_next_module = what;
+                }
+            }
+            else if (wcscmp(L"gamepad.overlay.prev-module", key.c_str())==0) {
+                int what = xi_name_to_number(value.c_str());
+                if (what != -1) {
+                    _overlay_prev_module = what;
                 }
             }
             else if (wcscmp(L"gamepad.stick-sensitivity", key.c_str())==0) {
@@ -1850,6 +1875,12 @@ BOOL sider_object_enum_callback(LPCDIDEVICEOBJECTINSTANCE lpddoi, LPVOID pvRef)
             _di_module_switch.dwOfs = ddoi.dwOfs;
             _di_module_switch.what = what;
         }
+        // prev module
+        if (what == _gamepad_config->_overlay_prev_module) {
+            _di_module_switch_prev.dwType = ddoi.dwType;
+            _di_module_switch_prev.dwOfs = ddoi.dwOfs;
+            _di_module_switch_prev.what = what;
+        }
     }
     return DIENUM_CONTINUE;
 }
@@ -2404,7 +2435,7 @@ char *module_ball_name(module_t *m, char *name)
     return res;
 }
 
-char *module_stadium_name(module_t *m, char *name, BYTE stadium_id)
+char *module_stadium_name(module_t *m, char *name, BYTE stadium_id, SCHEDULE_ENTRY *se)
 {
     char *res = NULL;
     if (m->evt_get_stadium_name != 0) {
@@ -2415,7 +2446,21 @@ char *module_stadium_name(module_t *m, char *name, BYTE stadium_id)
         lua_pushvalue(L, 1); // ctx
         lua_pushstring(L, name);
         lua_pushinteger(L, stadium_id);
-        if (lua_pcall(L, 3, 1, 0) != LUA_OK) {
+        if (se) {
+            lua_newtable(L);
+            lua_pushinteger(L, se->tournament_id);
+            lua_setfield(L, -2, "tournament_id");
+            lua_pushinteger(L, se->match_info);
+            lua_setfield(L, -2, "match_info");
+            lua_pushinteger(L, decode_team_id(se->home_team_encoded));
+            lua_setfield(L, -2, "home_team");
+            lua_pushinteger(L, decode_team_id(se->away_team_encoded));
+            lua_setfield(L, -2, "away_team");
+        }
+        else {
+            lua_pushnil(L);
+        }
+        if (lua_pcall(L, 4, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR from module_stadium_name: %s\n", GetCurrentThreadId(), err);
         }
@@ -3373,7 +3418,7 @@ DWORD direct_input_poll(void *param) {
         if (_gamepad_config->_xinput_enabled && xi_skip_count == 0) {
             // read XInput controller state
             DWORD dwResult;
-            for (DWORD k=0; k<XUSER_MAX_COUNT; k++ ) {
+            for (DWORD k=0; k<4; k++ ) {
                 // start with the last one that was successfully queried
                 int j = (last_good_xi + k) % 4;
 
@@ -3461,18 +3506,33 @@ DWORD direct_input_poll(void *param) {
                             _overlay_on = !_overlay_on;
                             play_overlay_toggle_sound();
                             handled = true;
+                            _toggle_sequence_on = true;
                             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
                         }
-                        else {
+                        else if (!_toggle_sequence_on) {
                             // module switch
                             BYTE was_b = *(BYTE*)((BYTE*)&_prev_xi_state + _gamepad_config->_overlay_next_module);
                             BYTE b = *(BYTE*)((BYTE*)&state + _gamepad_config->_overlay_next_module);
-                            if (b==1 && was_b!=b) {
+                            if (b==0 && was_b!=b) {
                                 if (_overlay_on) {
                                     sider_switch_overlay_to_next_module();
                                     handled = true;
                                 }
                             }
+                            else {
+                                was_b = *(BYTE*)((BYTE*)&_prev_xi_state + _gamepad_config->_overlay_prev_module);
+                                b = *(BYTE*)((BYTE*)&state + _gamepad_config->_overlay_prev_module);
+                                if (b==0 && was_b!=b) {
+                                    if (_overlay_on) {
+                                        sider_switch_overlay_to_prev_module();
+                                        handled = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (_toggle_sequence_on && b1==0 && b2==0) {
+                            _toggle_sequence_on = false;
                         }
 
                         // check states
@@ -3597,18 +3657,33 @@ DWORD direct_input_poll(void *param) {
                         _overlay_on = !_overlay_on;
                         play_overlay_toggle_sound();
                         handled = true;
+                        _toggle_sequence_on = true;
                         DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
                     }
-                    else {
+                    else if (!_toggle_sequence_on) {
                         // module switch
                         BYTE was_b = *(BYTE*)(_prev_controller_buttons + _di_module_switch.dwOfs);
                         BYTE b = *(BYTE*)(_controller_buttons + _di_module_switch.dwOfs);
-                        if (b!=0 && was_b!=b) {
+                        if (b==0 && was_b!=b) {
                             if (_overlay_on) {
                                 sider_switch_overlay_to_next_module();
                                 handled = true;
                             }
                         }
+                        else {
+                            was_b = *(BYTE*)(_prev_controller_buttons + _di_module_switch_prev.dwOfs);
+                            b = *(BYTE*)(_controller_buttons + _di_module_switch_prev.dwOfs);
+                            if (b==0 && was_b!=b) {
+                                if (_overlay_on) {
+                                    sider_switch_overlay_to_prev_module();
+                                    handled = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (_toggle_sequence_on && b1==0 && b2==0) {
+                        _toggle_sequence_on = false;
                     }
 
                     // check states
@@ -4492,14 +4567,15 @@ char* sider_ball_name(char *ball_name)
     return ball_name;
 }
 
-char* sider_stadium_name(STAD_INFO_STRUCT *stad_info)
+char* sider_stadium_name(STAD_INFO_STRUCT *stad_info, LONGLONG rdx, LONGLONG ptr, SCHEDULE_ENTRY *se)
 {
     if (_config->_lua_enabled) {
+        se = (ptr != 0 && ptr != 1) ? se : NULL;
         // lua callbacks
         vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
-            char *new_stadium_name = module_stadium_name(m, stad_info->name, stad_info->id);
+            char *new_stadium_name = module_stadium_name(m, stad_info->name, stad_info->id, se);
             if (new_stadium_name) {
                 return new_stadium_name;
             }
@@ -6085,6 +6161,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"gamepad.overlay.toggle-1 = %s\n", _xi_names[_gamepad_config->_overlay_toggle_1]);
     log_(L"gamepad.overlay.toggle-2 = %s\n", _xi_names[_gamepad_config->_overlay_toggle_2]);
     log_(L"gamepad.overlay.next-module = %s\n", _xi_names[_gamepad_config->_overlay_next_module]);
+    log_(L"gamepad.overlay.prev-module = %s\n", _xi_names[_gamepad_config->_overlay_prev_module]);
     if (_gamepad_config->_dinput_enabled) {
         log_(L"--------------------------\n");
         log_(L"DirectInput controls map: %d items\n", _gamepad_config->_di_map.size());

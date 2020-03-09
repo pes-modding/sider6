@@ -275,7 +275,13 @@ sider_stadium_name_hk proc
         mov     [rsp+20h],rcx
         mov     [rsp+28h],rdx
         ;mov     rcx,rdx
+        push    r8
+        push    r9
+        mov     r8,rdi
+        mov     r9,rbx
         call    sider_stadium_name
+        pop     r9
+        pop     r8
         mov     rdx,rax
         mov     rcx,[rsp+20h]
         or      r8,0ffffffffffffffffh
