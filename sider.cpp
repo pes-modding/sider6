@@ -23,6 +23,7 @@
 #include "kitinfo.h"
 #include "audio.h"
 
+#define XINPUT_USE_9_1_0
 #define DIRECTINPUT_VERSION 0x0800
 #define SAFE_RELEASE(x) if (x) { x->Release(); x = NULL; }
 
@@ -43,7 +44,8 @@
 //#pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
-#pragma comment(lib, "xinput.lib")
+//#pragma comment(lib, "xinput.lib")
+#pragma comment(lib, "xinput9_1_0.lib")
 
 #ifndef LUA_OK
 #define LUA_OK 0
@@ -3416,7 +3418,7 @@ DWORD direct_input_poll(void *param) {
         if (_gamepad_config->_xinput_enabled && xi_skip_count == 0) {
             // read XInput controller state
             DWORD dwResult;
-            for (DWORD k=0; k<XUSER_MAX_COUNT; k++ ) {
+            for (DWORD k=0; k<4; k++ ) {
                 // start with the last one that was successfully queried
                 int j = (last_good_xi + k) % 4;
 
