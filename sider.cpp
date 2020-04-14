@@ -2693,7 +2693,7 @@ void module_read(module_t *m, const char *file_name, void *data, LONGLONG len, F
     LeaveCriticalSection(&_cs);
 }
 
-void module_data_ready(module_t *m, const char *file_name, void *data, LONGLONG len, LONGLONG total_size, LONGLONG offset)
+void module_data_ready(module_t *m, const char *file_name, void *data, LONGLONG len, LONGLONG total_size, LONGLONG offset, const char *cpk_name)
 {
     EnterCriticalSection(&_cs);
     lua_pushvalue(m->L, m->evt_lcpk_data_ready);
@@ -2705,7 +2705,8 @@ void module_data_ready(module_t *m, const char *file_name, void *data, LONGLONG 
     lua_pushinteger(L, len);
     lua_pushinteger(L, total_size);
     lua_pushinteger(L, offset);
-    if (lua_pcall(L, 6, 0, 0) != LUA_OK) {
+    lua_pushstring(L, cpk_name);
+    if (lua_pcall(L, 7, 0, 0) != LUA_OK) {
         const char *err = luaL_checkstring(L, -1);
         logu_("[%d] lua ERROR from module_data_ready: %s\n", GetCurrentThreadId(), err);
         lua_pop(L, 1);
@@ -4111,7 +4112,6 @@ BOOL sider_read_file(
             if (_config->_lua_enabled && _rewrite_count > 0) do_rewrite(rs->filename);
             DBG(1) logu_("read_file:: rs->filesize: %llx, rs->offset: %llx, rs->filename: %s\n",
                 rs->filesize, rs->offset.full, rs->filename);
-
             fn = (_config->_lua_enabled) ? have_content(rs->filename) : NULL;
             fn = (fn) ? fn : have_live_file(rs->filename);
             cache_it(rs->filename, fn);
@@ -4240,7 +4240,6 @@ void sider_mem_copy(BYTE *dst, LONGLONG dst_len, BYTE *src, LONGLONG src_len, BY
             if (_config->_lua_enabled && _rewrite_count > 0) do_rewrite(rs->filename);
             DBG(1) logu_("mem_copy:: rs->filesize: %llx, rs->offset: %llx, rs->filename: %s\n",
                 rs->filesize, rs->offset.full, rs->filename);
-
             fn = (_config->_lua_enabled) ? have_content(rs->filename) : NULL;
             fn = (fn) ? fn : have_live_file(rs->filename);
             cache_it(rs->filename, fn);
@@ -4630,8 +4629,9 @@ DWORD sider_data_ready(FILE_LOAD_INFO *fli)
     }
     LONGLONG base_offset_in_cpk  = *(LONGLONG*)((BYTE*)fli +  0x168);
     LONGLONG offs = fli->offset_in_cpk - base_offset_in_cpk;
-    DBG(1024) logu_("sider_data_ready:: {%s}, buffer=%p, size=0x%x, total=0x%x, sofar=0x%x, bsize=0x%x, offs=0x%x, type=%d\n",
-        filename, fli->buffer, fli->filesize, fli->total_bytes_to_read, fli->bytes_read_so_far, fli->buffer_size, offs, fli->type);
+    DBG(1024) logu_("sider_data_ready:: {%s}, {CPK:%s}, buffer=%p, size=0x%x, total=0x%x, sofar=0x%x, bsize=0x%x, offs=0x%x, type=%d\n",
+        filename, fli->cpk_filename, fli->buffer, fli->filesize, fli->total_bytes_to_read,
+        fli->bytes_read_so_far, fli->buffer_size, offs, fli->type);
 
     if (fli->type == 7) { // completely read and CRI-unpacked
         // livecpk_data_ready
@@ -4640,7 +4640,7 @@ DWORD sider_data_ready(FILE_LOAD_INFO *fli)
             for (i = _modules.begin(); i != _modules.end(); i++) {
                 module_t *m = *i;
                 if (m->evt_lcpk_data_ready != 0) {
-                    module_data_ready(m, filename, fli->buffer, fli->buffer_size, fli->filesize, offs);
+                    module_data_ready(m, filename, fli->buffer, fli->buffer_size, fli->filesize, offs, fli->cpk_filename);
                 }
             }
         }
