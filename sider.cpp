@@ -1004,7 +1004,7 @@ public:
                     name = value.substr(0, first_comma_pos);
                     //log_(L"name = {%s}\n", name);
                     value = value.substr(first_comma_pos + 1);
-                    if (swscanf(value.c_str(), L"%d,%x", &gkm.value, &gkm.vkey)==2) {
+                    if (swscanf(value.c_str(), L"%d,%hhx", &gkm.value, &gkm.vkey)==2) {
                         gkm.what = xi_name_to_number(name.c_str());
                         if (gkm.what >= 0) {
                             uint64_t key = (((uint64_t)gkm.what << 32) & 0xffffffff00000000L ) | ((uint64_t)gkm.value & 0x00000000ffffffffL);
@@ -5059,6 +5059,35 @@ static int sider_context_get_kit(lua_State *L)
 
     lua_newtable(L);
     get_kit_info_to_lua_table(L, -1, src_data);
+
+    // handle unicolors
+    TEAM_INFO_STRUCT *ti = NULL;
+    if (_mi) {
+        if (decode_team_id(_mi->home.team_id_encoded) == team_id) {
+            ti = &(_mi->home);
+        }
+        else if (decode_team_id(_mi->away.team_id_encoded) == team_id) {
+            ti = &(_mi->away);
+        }
+        else if (_home_team_info && decode_team_id(_home_team_info->team_id_encoded) == team_id) {
+            ti = _home_team_info;
+        }
+        else if (_away_team_info && decode_team_id(_away_team_info->team_id_encoded) == team_id) {
+            ti = _away_team_info;
+        }
+    }
+    if (ti) {
+        BYTE *unicolor1 = (kit_id < 2) ? ti->players[kit_id].color1 : ti->extra_players[kit_id-2].color1;
+        lua_pushfstring(L, "#%02x%02x%02x", unicolor1[0], unicolor1[1], unicolor1[2]);
+        lua_setfield(L, -2, "UniColor_Color1");
+        BYTE *unicolor2 = (kit_id < 2) ? ti->players[kit_id].color2 : ti->extra_players[kit_id-2].color2;
+        lua_pushfstring(L, "#%02x%02x%02x", unicolor2[0], unicolor2[1], unicolor2[2]);
+        lua_setfield(L, -2, "UniColor_Color2");
+    }
+    else {
+        logu_("WARN: ti is unknown. Cannot determine unicolors\n");
+    }
+
     return 1;
 }
 
