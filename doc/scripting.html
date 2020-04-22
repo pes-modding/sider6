@@ -445,7 +445,7 @@ goalkeepers end up wearing 2nd kit of outfield players.</p>
 
 <p class="evthdr">
 Event name: <span class="evt">"livecpk_data_ready"</span><br />
-Handler function: <span class="func">f(ctx, filename, data, size, total_size, offset)</span><br />
+Handler function: <span class="func">f(ctx, filename, data, size, total_size, offset, cpk_filename)</span><br />
 Return value: <span class="file">nil</span>.
 </p>
 
@@ -458,6 +458,7 @@ been filled with data. Here is what the parameters mean:
 <li>size: buffer length in bytes</li>
 <li>total_size: total size (in bytes) of the file</li>
 <li>offset: offset in file before the read happened</li>
+<li>cpk_filename: name of the CPK that the file was read from (if known)</li>
 </ul>
 </p>
 
@@ -485,7 +486,7 @@ to log every file as it is loaded by the game:
 <pre>
 local m = {}
 
-function m.data_ready(ctx, filename, data, size, total_size, offset)
+function m.data_ready(ctx, filename, data, size, total_size, offset, cpk_filename)
     log(filename)
 end
 

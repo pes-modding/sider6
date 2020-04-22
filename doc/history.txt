@@ -2,6 +2,14 @@ Sider 6 Release History
 =======================
 
 
+April 22, 2020
+v6.3.6
+- rebuilt with modern compiler suite - Visual Studio 2019
+- dropping dependency on xinput1_3.dll
+- ctx.kits.get and ctx.kits.get_gk now return unicolor attributes
+- livecpk_data_ready event gets another parameter: cpk_filename
+
+
 March 6, 2020
 v6.3.5
 - bi-direction cycling through modules in overlay via gamepad
