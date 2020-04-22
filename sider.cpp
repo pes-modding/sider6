@@ -5106,6 +5106,35 @@ static int sider_context_get_gk_kit(lua_State *L)
 
     lua_newtable(L);
     get_kit_info_to_lua_table(L, -1, src_data);
+
+    // handle unicolors
+    TEAM_INFO_STRUCT *ti = NULL;
+    if (_mi) {
+        if (decode_team_id(_mi->home.team_id_encoded) == team_id) {
+            ti = &(_mi->home);
+        }
+        else if (decode_team_id(_mi->away.team_id_encoded) == team_id) {
+            ti = &(_mi->away);
+        }
+        else if (_home_team_info && decode_team_id(_home_team_info->team_id_encoded) == team_id) {
+            ti = _home_team_info;
+        }
+        else if (_away_team_info && decode_team_id(_away_team_info->team_id_encoded) == team_id) {
+            ti = _away_team_info;
+        }
+    }
+    if (ti) {
+        BYTE *unicolor1 = ti->goalkeepers[0].color1;
+        lua_pushfstring(L, "#%02x%02x%02x", unicolor1[0], unicolor1[1], unicolor1[2]);
+        lua_setfield(L, -2, "UniColor_Color1");
+        BYTE *unicolor2 = ti->goalkeepers[0].color2;
+        lua_pushfstring(L, "#%02x%02x%02x", unicolor2[0], unicolor2[1], unicolor2[2]);
+        lua_setfield(L, -2, "UniColor_Color2");
+    }
+    else {
+        logu_("WARN: ti is unknown. Cannot determine unicolors\n");
+    }
+
     return 1;
 }
 
