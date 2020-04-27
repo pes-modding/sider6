@@ -1,9 +1,11 @@
 -- memory library for Win64
 
+local bit = require('bit')
 local ffi = require('ffi')
 local C = ffi.C
 
 ffi.cdef [[
+bool VirtualProtect(void *p, size_t len, uint32_t newprot, uint32_t *oldprot);
 bool VirtualProtect(void *p, size_t len, uint32_t newprot, uint32_t *oldprot);
 int memcmp(void *dst, void *src, size_t len);
 int wsprintfA(char *dst, char *fmt, ...);
@@ -12,6 +14,13 @@ typedef uint8_t BYTE;
 typedef uint16_t WORD;
 typedef uint32_t LONG;
 typedef uint32_t DWORD;
+typedef void* PVOID;
+typedef void* LPVOID;
+typedef void* LPCVOID;
+typedef DWORD* DWORD_PTR;
+typedef uint64_t DWORDLONG;
+typedef size_t SIZE_T;
+typedef bool BOOL;
 
 typedef struct _IMAGE_DOS_HEADER
 {
@@ -70,12 +79,77 @@ typedef struct _IMAGE_SECTION_HEADER {
 
 IMAGE_DOS_HEADER *GetModuleHandleW(char *name);
 
+typedef struct _SYSTEM_INFO {
+  union {
+    DWORD dwOemId;
+    struct {
+      WORD wProcessorArchitecture;
+      WORD wReserved;
+    } DUMMYSTRUCTNAME;
+  } DUMMYUNIONNAME;
+  DWORD     dwPageSize;
+  LPVOID    lpMinimumApplicationAddress;
+  LPVOID    lpMaximumApplicationAddress;
+  DWORD_PTR dwActiveProcessorMask;
+  DWORD     dwNumberOfProcessors;
+  DWORD     dwProcessorType;
+  DWORD     dwAllocationGranularity;
+  WORD      wProcessorLevel;
+  WORD      wProcessorRevision;
+} SYSTEM_INFO, *LPSYSTEM_INFO;
+
+typedef struct _MEMORYSTATUSEX {
+  DWORD     dwLength;
+  DWORD     dwMemoryLoad;
+  DWORDLONG ullTotalPhys;
+  DWORDLONG ullAvailPhys;
+  DWORDLONG ullTotalPageFile;
+  DWORDLONG ullAvailPageFile;
+  DWORDLONG ullTotalVirtual;
+  DWORDLONG ullAvailVirtual;
+  DWORDLONG ullAvailExtendedVirtual;
+} MEMORYSTATUSEX, *LPMEMORYSTATUSEX;
+
+typedef struct _MEMORY_BASIC_INFORMATION {
+  PVOID  BaseAddress;
+  PVOID  AllocationBase;
+  DWORD  AllocationProtect;
+  SIZE_T RegionSize;
+  DWORD  State;
+  DWORD  Protect;
+  DWORD  Type;
+} MEMORY_BASIC_INFORMATION, *PMEMORY_BASIC_INFORMATION;
+
+BOOL GlobalMemoryStatusEx(LPMEMORYSTATUSEX lpBuffer);
+void GetSystemInfo(LPSYSTEM_INFO lpSystemInfo);
+SIZE_T VirtualQuery(
+  LPCVOID                   lpAddress,
+  PMEMORY_BASIC_INFORMATION lpBuffer,
+  SIZE_T                    dwLength
+);
+BOOL VirtualLock(
+  LPVOID lpAddress,
+  SIZE_T dwSize
+);
+BOOL VirtualUnlock(
+  LPVOID lpAddress,
+  SIZE_T dwSize
+);
+
 ]]
 
 local m = {}
 
 local PAGE_EXECUTE_READWRITE = 0x40
 local PAGE_EXECUTE_WRITECOPY = 0x80
+local MEM_FREE = 0x10000
+local MEM_RESERVE = 0x2000
+
+function m.get_system_info()
+    local p = ffi.new('SYSTEM_INFO[1]')
+    C.GetSystemInfo(p)
+    return p[0]
+end
 
 function m.search(s, from, to)
     local p = ffi.cast('char*', from)
@@ -83,6 +157,38 @@ function m.search(s, from, to)
     local res = sider_kmp_search(s, p, q)
     if res then
         return ffi.cast('char*', res)
+    end
+end
+
+function m.safe_search(s, from, to)
+    local p = ffi.cast('char*', from)
+    local q = ffi.cast('char*', to)
+    local si = m.get_system_info()
+    local ps = si.dwPageSize
+    local mask = bit.bor(MEM_FREE, MEM_RESERVE)
+
+    local mbi = ffi.new('MEMORY_BASIC_INFORMATION[1]')
+    local page_base = p - (ffi.cast('uint64_t', p) % ps)
+    while page_base < q do
+        local upto = page_base + ps
+        C.VirtualQuery(page_base, mbi, ps)
+        --log(string.format('page: %s:%s, State=%s', m.hex(page_base), m.hex(upto), m.hex(mbi[0].State)))
+        if bit.band(mbi[0].State, mask) == 0 then
+            -- handle guard pages
+            if not C.VirtualLock(page_base, ps) then
+                -- can fail first time, if it is a guard-page
+                C.VirtualLock(page_base, ps);
+            end
+            local res = sider_kmp_search(s, p, (upto < q) and upto or q)
+            if res then
+                return ffi.cast('char*', res)
+            end
+            C.VirtualUnlock(page_base, ps);
+        else
+            --log(string.format('page not accessible: %s:%s', m.hex(page_base), m.hex(upto)))
+        end
+        page_base = upto
+        p = page_base
     end
 end
 
@@ -240,6 +346,6 @@ end
 
 -- for backward compatibility
 m.tohexstring = m.hex
-        
+
 return m
 
