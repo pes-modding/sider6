@@ -993,6 +993,19 @@ Return value: address, at which the string of bytes was found
 or <span class="file">nil</span>, if the string was not found.</p>
 
 <p class="func">
+memory.safe_search(str, start_addr, end_addr)
+</p>
+
+<p class="desc">This function also searches for the string of bytes (str), in the range
+of memory addresses between start_addr and end_addr. However, unlike <b>memory.search</b>,
+which expects the entire range to be valid, this function checks if the memory pages it
+is about to access are allocated and available to the game process. Because of that, it is
+slower than memory.search, but it is very safe, as it skips past unavailable areas of RAM and
+guard pages and continues on.</p>
+Return value: address, at which the string of bytes was found
+or <span class="file">nil</span>, if the string was not found.</p>
+
+<p class="func">
 memory.pack(format, number)
 </p>
 
