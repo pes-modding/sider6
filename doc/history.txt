@@ -2,6 +2,12 @@ Sider 6 Release History
 =======================
 
 
+June 6, 2020
+v6.3.7
+- support for 1.07.00 exe
+- new function in memory lib: safe_search
+
+
 April 22, 2020
 v6.3.6
 - rebuilt with modern compiler suite - Visual Studio 2019
