@@ -2199,6 +2199,10 @@ bool module_set_match_settings(module_t *m, MATCH_INFO_STRUCT *mi)
         lua_setfield(L, -2, "extra_time");
         lua_pushinteger(L, mi->penalties);
         lua_setfield(L, -2, "penalties");
+        lua_pushinteger(L, mi->num_subs);
+        lua_setfield(L, -2, "substitutions");
+        lua_pushinteger(L, mi->num_subs_et);
+        lua_setfield(L, -2, "substitutions_in_extra_time");
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR from module_set_match_settings: %s\n", GetCurrentThreadId(), err);
@@ -2217,6 +2221,16 @@ bool module_set_match_settings(module_t *m, MATCH_INFO_STRUCT *mi)
             lua_getfield(L, -1, "penalties");
             if (lua_isnumber(L, -1)) {
                 mi->penalties = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            lua_getfield(L, -1, "substitutions");
+            if (lua_isnumber(L, -1)) {
+                mi->num_subs = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            lua_getfield(L, -1, "substitutions_in_extra_time");
+            if (lua_isnumber(L, -1)) {
+                mi->num_subs_et = luaL_checkinteger(L, -1);
             }
             lua_pop(L, 1);
             res = true;
@@ -4480,6 +4494,8 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
         set_context_field_int("difficulty", mi->difficulty);
         set_context_field_int("extra_time", mi->extra_time_choice);
         set_context_field_int("penalties", mi->penalties);
+        set_context_field_int("substitutions", mi->num_subs);
+        set_context_field_int("substitutions_in_extra_time", mi->num_subs_et);
 
         // clear stadium_choice in context
         //set_context_field_nil("stadium_choice");
