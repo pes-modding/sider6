@@ -2,6 +2,11 @@ Sider 6 Release History
 =======================
 
 
+August 8, 2020
+v6.3.9
+- fix for "set_stadium" event not firing for some leagues/cups
+
+
 July 17, 2020
 v6.3.8
 - can now change number of substitutions in any match
