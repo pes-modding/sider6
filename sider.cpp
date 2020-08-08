@@ -316,6 +316,7 @@ const char *_context_fields[] = {
     "away_team", "home_team", "stadium_choice", "stadium",
     "weather", "weather_effects", "timeofday", "season",
     "tournament_id", "mis", "sci", "difficulty", "extra_time", "penalties",
+    "substitutions", "substitutions_in_extra_time",
 };
 size_t _context_fields_count = sizeof(_context_fields)/sizeof(const char *);
 

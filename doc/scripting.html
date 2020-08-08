@@ -272,6 +272,14 @@ for the next match.</td>
 <td>0/1 flag to indicate if penalty shootout will be played</td>
 </tr>
 <tr>
+<th>ctx.substitutions</th>
+<td>number of substitutions allowed in normal time</td>
+</tr>
+<tr>
+<th>ctx.substitutions_in_extra_time</th>
+<td>number of substitutions allowed in extra time</td>
+</tr>
+<tr>
 <th class="last">ctx.kits</th>
 <td class="last">table of functions for kit manipulation. (See more details further down)</td>
 </tr>
@@ -632,13 +640,15 @@ Return value expected: <span class="file">nil</span> or table
 
 <p>This event fires, after the match settings had been chosen for the upcoming
 match. The "options" parameter is a Lua table which contains the following
-keys: "difficulty", "extra_time", "penalties".
+keys: "difficulty", "extra_time", "penalties", "substitutions", "substitutions_in_extra_time".
 Each of these has an integer value, as the game uses:
 <ul>
 <li>difficulty: 0 - Beginner, 1 - Amateur, 2 - Regular, 3 - Professional,
     4 - Top Player, 5 - Super Star, 6 - Legend</li>
 <li>extra_time: 0 - off, 1 - on</li>
 <li>penalties: 0 - off, 1 - on</li>
+<li>substitutions: number of subs allowed in normal time</li>
+<li>substitutions_in_extra_time: number of subs allowed in extra time</li>
 </ul>
 </p>
 

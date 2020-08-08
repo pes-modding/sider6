@@ -2,6 +2,11 @@ Sider 6 Release History
 =======================
 
 
+July 17, 2020
+v6.3.8
+- can now change number of substitutions in any match
+
+
 June 6, 2020
 v6.3.7
 - support for 1.07.00 exe

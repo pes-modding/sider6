@@ -1,4 +1,4 @@
--- Set match settings for Exhibition match
+-- Set match settings
 
 local m = {}
 
@@ -13,11 +13,15 @@ m.penalties = 1
 
 function m.set_match_settings(ctx, options)
     if ctx.tournament_id == 65535 then
+        -- for exhibition matches
         options.difficulty = m.difficulty
         options.extra_time = m.extra_time
         options.penalties = m.penalties
-        return options
+    else
+        -- for non-exhibition matches: enforce number of subs
+        options.substitutions = 5
     end
+    return options
 end
 
 function m.init(ctx)
