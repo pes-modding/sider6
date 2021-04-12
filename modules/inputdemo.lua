@@ -2,7 +2,7 @@
 =========================
 
 inputdemo module v2.0
-Requires: sider.dll 7.1.0+
+Requires: sider.dll 6.4.0+
 
 Demonstrates usage of: "overlay_on", "key_down" and "gamepad_input" events
 
