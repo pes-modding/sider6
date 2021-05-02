@@ -2,6 +2,13 @@ Sider 6 Release History
 =======================
 
 
+May 2, 2021
+v6.4.1
+- fix for problem introduced in version 6.4.0:
+  with overlay disabled (overlay.enabled = 0), sider was causing immediate game crash.
+  This is fixed now. Thanks to SinnyDeas for reporting the issue.
+
+
 April 12, 2021
 v6.4.0
 - "input-blocking" feature
