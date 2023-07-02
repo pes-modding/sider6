@@ -2,6 +2,15 @@ Sider 6 Release History
 =======================
 
 
+July 2, 2023
+v6.4.3
+- fixing a rare bug, when "after_set_conditions" event isn't called in Master League
+  (which led to subtle errors in such modules as StadiumServer and ScoreboardServer)
+  thanks to Sickbeard who reported it.
+- documentation updated: added previously missing info on:
+  "set_home_team_for_kits" and "set_away_team_for_kits" events
+
+
 February 15, 2023
 v6.4.2
 - "ctx.kits" updates: new "SleeveLimits" kit attribute and corrections for number
